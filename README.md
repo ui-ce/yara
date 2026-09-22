@@ -1,4 +1,4 @@
-# [ALGO — Interactive Algorithm & Data Structure Visualization Platform](http://algovisualizer.pages.dev)
+# ALGO — Interactive Algorithm & Data Structure Visualization Platform
 
 بازطراحی و توسعه‌ی ابزار تعاملی آموزش و مصورسازی الگوریتم‌ها و ساختمان داده‌ها
 
