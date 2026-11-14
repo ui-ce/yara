@@ -1,4 +1,9 @@
-# ALGO — Interactive Algorithm & Data Structure Visualization Platform
+# YARA Algorithm Visualization Tool
+# ابزار مصورسازی الگوریتم یارا
+
+یارا، یاور رایانه‌آموزی، ابزاری است برای یادگیری و آموزش علوم رایانه.
+
+
 
 بازطراحی و توسعه‌ی ابزار تعاملی آموزش و مصورسازی الگوریتم‌ها و ساختمان داده‌ها
 
@@ -9,6 +14,8 @@
 پروژه‌ی کارشناسی | پژوهشگر: زهرا ابراهیمی
 
 آدرس سامانه : [algovisualizer.pages.dev](http://algovisualizer.pages.dev) 
+
+یارا 
 
 ---
 
