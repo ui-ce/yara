@@ -43,4 +43,4 @@ Desktop.ini
 *.tsbuildinfo
 .history/
 *.tgz
-.pnpm-store/
+.pnpm-store/backend/target/
