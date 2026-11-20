@@ -1,9 +1,12 @@
 [package]
 name = "graph"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 petgraph = "0.8.3"
-text_io = "0.1.13"
-webgraph = "0.7.0"
+wasm-bindgen = "0.2"
+getrandom = { version = "0.4", features = ["wasm_js"] }

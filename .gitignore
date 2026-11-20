@@ -44,3 +44,6 @@ Desktop.ini
 .history/
 *.tgz
 .pnpm-store/backend/target/
+
+/backend/target/
+/backend/pkg/
