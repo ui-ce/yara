@@ -24,6 +24,17 @@ struct GraphSnapshot {
     suggested_directed: bool,
 }
 
+#[derive(Serialize)]
+struct ConductanceReport {
+    conductance: f64,
+    cut_weight: f64,
+    cut_edge_count: usize,
+    vol_s: f64,
+    vol_rest: f64,
+    total_vol: f64,
+    subset_size: usize,
+}
+
 #[wasm_bindgen]
 pub struct WasmGraphEngine {
     graph: Graph,
@@ -98,8 +109,64 @@ impl WasmGraphEngine {
     }
 
     pub fn get_conductance(&self, subset_indices: &[usize]) -> f64 {
-        let subset: std::collections::HashSet<usize> = subset_indices.iter().copied().collect();
+        let node_count = self.graph.nodes.len();
+        let subset: std::collections::HashSet<usize> = subset_indices
+            .iter()
+            .copied()
+            .filter(|&i| i < node_count)
+            .collect();
         self.graph.calculate_conductance(&subset)
+    }
+
+    pub fn get_conductance_details(&self, subset_indices: &[usize]) -> Result<String, String> {
+        let node_count = self.graph.nodes.len();
+        let s: std::collections::HashSet<usize> = subset_indices
+            .iter()
+            .copied()
+            .filter(|&i| i < node_count)
+            .collect();
+
+        let total_vol: f64 = self
+            .graph
+            .adjacency_list
+            .iter()
+            .flat_map(|edges| edges.iter())
+            .map(|e| e.weight)
+            .sum();
+
+        let mut cut_weight = 0.0;
+        let mut cut_edge_count = 0;
+        let mut vol_s = 0.0;
+
+        for &node in &s {
+            for edge in &self.graph.adjacency_list[node] {
+                vol_s += edge.weight;
+                if !s.contains(&edge.target) {
+                    cut_weight += edge.weight;
+                    cut_edge_count += 1;
+                }
+            }
+        }
+
+        let vol_rest = total_vol - vol_s;
+        let min_vol = vol_s.min(vol_rest);
+        let conductance = if s.is_empty() || s.len() == node_count || min_vol == 0.0 {
+            0.0
+        } else {
+            cut_weight / min_vol
+        };
+
+        let report = ConductanceReport {
+            conductance,
+            cut_weight,
+            cut_edge_count,
+            vol_s,
+            vol_rest,
+            total_vol,
+            subset_size: s.len(),
+        };
+
+        serde_json::to_string(&report).map_err(|e| e.to_string())
     }
 }
 
@@ -118,5 +185,17 @@ mod tests {
 
         let json_directed = engine.set_directed(true).unwrap();
         assert!(json_directed.contains("\"is_directed\":true"));
+    }
+
+    #[test]
+    fn test_wasm_conductance_details() {
+        let mut engine = WasmGraphEngine::new(false);
+        let input = "0 1\n1 2\n2 3\n";
+        engine.load_from_text(input).unwrap();
+
+        let json = engine.get_conductance_details(&[0, 1]).unwrap();
+        assert!(json.contains("\"cut_edge_count\":1"));
+        assert!(json.contains("\"vol_s\":3.0"));
+        assert!(json.contains("\"subset_size\":2"));
     }
 }
