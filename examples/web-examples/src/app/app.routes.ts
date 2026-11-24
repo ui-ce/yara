@@ -15,7 +15,7 @@ import { AdminContentPage } from './features/admin/admin-content';
 import { AdminTablesPage } from './features/admin/admin-tables';
 import { AdminSqlPage } from './features/admin/admin-sql';
 import { adminGuard } from './features/admin/admin.guard';
-
+import { GraphExplorerPage } from './features/graph-explorer/graph-explorer';
 
 export const routes: Routes = [
   {
@@ -58,7 +58,7 @@ export const routes: Routes = [
     path: 'algorithms/:id/learn',
     component: LearnPage,
   },
-   {
+  {
     path: 'compare/:id',
     component: ComparePage,
   },
@@ -73,6 +73,10 @@ export const routes: Routes = [
   {
     path: 'algorithms/:id/test/:difficulty/:set',
     component: Test,
+  },
+  {
+    path: 'graph-explorer',
+    component: GraphExplorerPage,
   },
   {
     path: '**',
