@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  NgZone,
   OnDestroy,
   computed,
   effect,
@@ -10,7 +11,7 @@ import {
 } from '@angular/core';
 import cytoscape, { Core, ElementDefinition } from 'cytoscape';
 import { WasmGraphService } from '../../core/services/wasm-graph.service';
-import { EdgeDto, GraphSnapshot } from '../../core/models/graph-engine.model';
+import { ConductanceReport, EdgeDto, GraphSnapshot } from '../../core/models/graph-engine.model';
 
 const MAX_RENDER_NODES = 250;
 const MAX_RENDER_EDGES = 800;
@@ -38,12 +39,14 @@ interface GraphViewData {
 })
 export class GraphExplorerPage implements OnDestroy {
   readonly graphService = inject(WasmGraphService);
+  private readonly ngZone = inject(NgZone);
   private readonly cyContainer = viewChild<ElementRef<HTMLDivElement>>('cyContainer');
   private cy: Core | null = null;
 
   readonly fileName = signal<string | null>(null);
   readonly parseTimeMs = signal<number | null>(null);
   readonly isLoading = signal(false);
+  readonly selectedIndices = signal<Set<number>>(new Set());
 
   readonly viewData = computed<GraphViewData | null>(() => {
     const snap = this.graphService.snapshot();
@@ -60,12 +63,29 @@ export class GraphExplorerPage implements OnDestroy {
     return { snap, isTruncated, visibleNodes, visibleEdges };
   });
 
+  readonly conductanceResult = computed<{ report: ConductanceReport; timeMs: number } | null>(
+    () => {
+      const snap = this.graphService.snapshot();
+      const selected = this.selectedIndices();
+      if (!snap || selected.size === 0) return null;
+      return this.graphService.getConductanceDetails(Array.from(selected));
+    },
+  );
+
   constructor() {
     effect(() => {
       const data = this.viewData();
       const container = this.cyContainer()?.nativeElement;
       if (data && container) {
         this.renderGraph(container, data);
+      }
+    });
+
+    effect(() => {
+      const selected = this.selectedIndices();
+      const snap = this.graphService.snapshot();
+      if (this.cy && snap) {
+        this.syncSelectionStyles(selected, snap.is_directed);
       }
     });
   }
@@ -77,6 +97,7 @@ export class GraphExplorerPage implements OnDestroy {
 
     this.isLoading.set(true);
     this.fileName.set(file.name);
+    this.selectedIndices.set(new Set());
     try {
       const text = await file.text();
       const start = performance.now();
@@ -91,6 +112,7 @@ export class GraphExplorerPage implements OnDestroy {
   async loadSample(): Promise<void> {
     this.isLoading.set(true);
     this.fileName.set('گراف نمونه');
+    this.selectedIndices.set(new Set());
     try {
       const start = performance.now();
       await this.graphService.loadFromText(SAMPLE_GRAPH);
@@ -107,6 +129,68 @@ export class GraphExplorerPage implements OnDestroy {
     const start = performance.now();
     await this.graphService.setDirected(!snap.is_directed);
     this.parseTimeMs.set(Math.round(performance.now() - start));
+  }
+
+  selectFirstHalf(): void {
+    const snap = this.graphService.snapshot();
+    if (!snap || snap.nodes.length < 2) return;
+    const count = Math.floor(snap.nodes.length / 2);
+    const next = new Set<number>();
+    for (let i = 0; i < count; i++) {
+      next.add(i);
+    }
+    this.selectedIndices.set(next);
+  }
+
+  selectRandomQuarter(): void {
+    const snap = this.graphService.snapshot();
+    if (!snap || snap.nodes.length < 2) return;
+    const targetSize = Math.max(1, Math.floor(snap.nodes.length * 0.25));
+    const next = new Set<number>();
+    while (next.size < targetSize) {
+      next.add(Math.floor(Math.random() * snap.nodes.length));
+    }
+    this.selectedIndices.set(next);
+  }
+
+  clearSelection(): void {
+    this.selectedIndices.set(new Set());
+  }
+
+  formatNumber(value: number, decimals = 4): string {
+    return Number.isInteger(value) ? String(value) : value.toFixed(decimals);
+  }
+
+  private toggleNodeSelection(nodeIndex: number): void {
+    this.selectedIndices.update((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeIndex)) {
+        next.delete(nodeIndex);
+      } else {
+        next.add(nodeIndex);
+      }
+      return next;
+    });
+  }
+
+  private syncSelectionStyles(selected: Set<number>, isDirected: boolean): void {
+    if (!this.cy) return;
+
+    this.cy.batch(() => {
+      this.cy!.nodes().forEach((node) => {
+        const idx = Number(node.id());
+        node.toggleClass('in-subset', selected.has(idx));
+      });
+
+      this.cy!.edges().forEach((edge) => {
+        const u = Number(edge.data('source'));
+        const v = Number(edge.data('target'));
+        const uIn = selected.has(u);
+        const vIn = selected.has(v);
+        const isCut = isDirected ? uIn && !vIn : uIn !== vIn;
+        edge.toggleClass('cut-edge', isCut);
+      });
+    });
   }
 
   private renderGraph(container: HTMLDivElement, data: GraphViewData): void {
@@ -134,6 +218,7 @@ export class GraphExplorerPage implements OnDestroy {
     this.cy = cytoscape({
       container,
       elements,
+      autounselectify: true,
       style: [
         {
           selector: 'node',
@@ -153,11 +238,14 @@ export class GraphExplorerPage implements OnDestroy {
           },
         },
         {
-          selector: 'node:selected',
+          selector: 'node.in-subset',
           style: {
-            label: 'data(label)',
-            'background-color': '#a855f7',
-            'border-color': '#f8fafc',
+            width: isSmallGraph ? 44 : 20,
+            height: isSmallGraph ? 44 : 20,
+            'background-color': '#10b981',
+            'border-width': 3,
+            'border-color': '#a7f3d0',
+            label: showNodeLabels ? 'data(label)' : '',
           },
         },
         {
@@ -178,6 +266,16 @@ export class GraphExplorerPage implements OnDestroy {
             'text-background-shape': 'roundrectangle',
           },
         },
+        {
+          selector: 'edge.cut-edge',
+          style: {
+            width: isSmallGraph ? 3.5 : 1.8,
+            'line-color': '#f43f5e',
+            'target-arrow-color': '#fb7185',
+            'line-style': 'dashed',
+            'z-index': 10,
+          },
+        },
       ],
       layout: isSmallGraph
         ? {
@@ -194,6 +292,13 @@ export class GraphExplorerPage implements OnDestroy {
             minNodeSpacing: 24,
           },
     });
+
+    this.cy.on('tap', 'node', (evt) => {
+      const idx = Number(evt.target.id());
+      this.ngZone.run(() => this.toggleNodeSelection(idx));
+    });
+
+    this.syncSelectionStyles(this.selectedIndices(), snap.is_directed);
   }
 
   ngOnDestroy(): void {

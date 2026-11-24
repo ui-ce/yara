@@ -7,6 +7,7 @@ export class WasmGraphEngine {
     add_edge(source: string, target: string, weight: number): void;
     add_node(id: string): void;
     get_conductance(subset_indices: Uint32Array | number[]): number;
+    get_conductance_details(subset_indices: Uint32Array | number[]): string;
     get_snapshot(): string;
     load_from_text(content: string): string;
     constructor(is_directed: boolean);
@@ -21,6 +22,7 @@ export interface InitOutput {
     readonly wasmgraphengine_add_edge: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmgraphengine_add_node: (a: number, b: number, c: number) => void;
     readonly wasmgraphengine_get_conductance: (a: number, b: number, c: number) => number;
+    readonly wasmgraphengine_get_conductance_details: (a: number, b: number, c: number) => [number, number, number, number];
     readonly wasmgraphengine_get_snapshot: (a: number) => [number, number, number, number];
     readonly wasmgraphengine_load_from_text: (a: number, b: number, c: number) => [number, number, number, number];
     readonly wasmgraphengine_new: (a: number) => number;

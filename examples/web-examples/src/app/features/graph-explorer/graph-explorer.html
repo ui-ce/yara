@@ -2,7 +2,7 @@
   <header class="page-header">
     <div>
       <h1>کاوشگر گراف (Rust / Wasm)</h1>
-      <p class="subtitle">آپلود و تحلیل گراف‌های جهت‌دار، بدون جهت و وزن‌دار با موتور WebAssembly</p>
+      <p class="subtitle">آپلود و تحلیل رسانایی (Conductance) گراف‌های جهت‌دار، بدون جهت و وزن‌دار</p>
     </div>
 
     <div class="actions">
@@ -37,13 +37,76 @@
       }
     </div>
 
+    <section class="conductance-panel">
+      <div class="conductance-controls">
+        <div class="panel-title">
+          <strong>تحلیل رسانایی زیرمجموعه S</strong>
+          <span class="hint">برای ساخت زیرمجموعه S روی راس‌ها کلیک کنید یا از دکمه‌های سریع استفاده کنید</span>
+        </div>
+
+        <div class="quick-buttons">
+          <button type="button" class="btn btn-sm btn-secondary" (click)="selectFirstHalf()">
+            نیمه اول راس‌ها
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" (click)="selectRandomQuarter()">
+            تصادفی ۲۵٪
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-danger"
+            (click)="clearSelection()"
+            [disabled]="selectedIndices().size === 0"
+          >
+            پاک کردن ({{ selectedIndices().size }})
+          </button>
+        </div>
+      </div>
+
+      @if (conductanceResult(); as res) {
+        <div class="metrics-grid">
+          <div class="metric-card metric-primary">
+            <span class="metric-label">رسانایی φ(S)</span>
+            <strong class="metric-value">{{ formatNumber(res.report.conductance, 4) }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">اندازه |S|</span>
+            <strong class="metric-value">
+              {{ res.report.subset_size }} / {{ data.snap.nodes.length }}
+            </strong>
+          </div>
+          <div class="metric-card metric-cut">
+            <span class="metric-label">برش (وزن / تعداد یال)</span>
+            <strong class="metric-value">
+              {{ formatNumber(res.report.cut_weight, 2) }} ({{ res.report.cut_edge_count }})
+            </strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">حجم vol(S)</span>
+            <strong class="metric-value">{{ formatNumber(res.report.vol_s, 2) }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">حجم vol(V \ S)</span>
+            <strong class="metric-value">{{ formatNumber(res.report.vol_rest, 2) }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">زمان محاسبه Rust</span>
+            <strong class="metric-value">{{ formatNumber(res.timeMs, 2) }}ms</strong>
+          </div>
+        </div>
+      } @else {
+        <div class="conductance-empty">
+          هیچ راسی انتخاب نشده است — روی راس‌های گراف کلیک کنید (سبز = عضو S، خط‌چین قرمز = یال برش).
+        </div>
+      }
+    </section>
+
     @if (data.isTruncated) {
       <div class="notice-box">
         برای جلوگیری از کند شدن مرورگر، پیش‌نمایش
         <strong>{{ data.visibleNodes.length }}</strong> راس و
         <strong>{{ data.visibleEdges.length }}</strong> یال اول نمایش داده شده است.
-        کل گراف (<strong>{{ data.snap.nodes.length }}</strong> راس و
-        <strong>{{ data.snap.edges.length }}</strong> یال) کامل در حافظه Rust لود شده است.
+        محاسبه رسانایی همچنان روی کل گراف (<strong>{{ data.snap.nodes.length }}</strong> راس و
+        <strong>{{ data.snap.edges.length }}</strong> یال) در Rust انجام می‌شود.
       </div>
     }
   }

@@ -115,6 +115,14 @@ export const LANDING_ALGORITHMS: LandingAlgorithm[] = [
     route: 'algorithms/dijkstra',
     category: 'graph',
   },
+  {
+      nameKey: 'home.algorithm.graphExplorer.name',
+      classKey: 'home.algorithm.graphExplorer.class',
+      descriptionKey: 'home.algorithm.graphExplorer.description',
+      imgUrl: '',
+      route: 'graph-explorer',
+      category: 'graph',
+    },
 ];
 
 // Product tour cards (section 3.5, between Features and the Battle
