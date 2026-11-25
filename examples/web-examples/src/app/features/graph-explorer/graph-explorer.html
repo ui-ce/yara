@@ -1,0 +1,66 @@
+<div class="explorer-page" dir="rtl">
+  <header class="page-header">
+    <div>
+      <h1>کاوشگر گراف (Rust / Wasm)</h1>
+      <p class="subtitle">آپلود و تحلیل گراف‌های جهت‌دار، بدون جهت و وزن‌دار با موتور WebAssembly</p>
+    </div>
+
+    <div class="actions">
+      <label class="btn btn-primary">
+        <span>آپلود فایل گراف</span>
+        <input type="file" accept=".txt,.csv,.edgelist" (change)="onFileSelected($event)" hidden />
+      </label>
+
+      <button type="button" class="btn btn-secondary" (click)="loadSample()" [disabled]="isLoading()">
+        گراف نمونه
+      </button>
+
+      @if (viewData(); as data) {
+        <button type="button" class="btn btn-outline" (click)="toggleDirection()">
+          {{ data.snap.is_directed ? 'جهت‌دار (تغییر به بدون جهت)' : 'بدون جهت (تغییر به جهت‌دار)' }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (viewData(); as data) {
+    <div class="stats-bar">
+      @if (fileName(); as name) {
+        <span class="badge badge-file">{{ name }}</span>
+      }
+      <span class="badge">راس‌ها: <strong>{{ data.snap.nodes.length }}</strong></span>
+      <span class="badge">یال‌ها: <strong>{{ data.snap.edges.length }}</strong></span>
+      <span class="badge">{{ data.snap.is_weighted ? 'وزن‌دار' : 'بدون وزن' }}</span>
+      <span class="badge">{{ data.snap.is_directed ? 'جهت‌دار' : 'بدون جهت' }}</span>
+      @if (parseTimeMs() !== null) {
+        <span class="badge badge-speed">پردازش Rust: {{ parseTimeMs() }}ms</span>
+      }
+    </div>
+
+    @if (data.isTruncated) {
+      <div class="notice-box">
+        برای جلوگیری از کند شدن مرورگر، پیش‌نمایش
+        <strong>{{ data.visibleNodes.length }}</strong> راس و
+        <strong>{{ data.visibleEdges.length }}</strong> یال اول نمایش داده شده است.
+        کل گراف (<strong>{{ data.snap.nodes.length }}</strong> راس و
+        <strong>{{ data.snap.edges.length }}</strong> یال) کامل در حافظه Rust لود شده است.
+      </div>
+    }
+  }
+
+  @if (graphService.error(); as err) {
+    <div class="error-box">{{ err }}</div>
+  }
+
+  <div class="canvas-wrapper">
+    @if (!viewData() && !isLoading()) {
+      <div class="empty-state">
+        یک فایل گراف (`.txt` یا `.csv`) آپلود کنید یا «گراف نمونه» را بزنید.
+      </div>
+    }
+    @if (isLoading()) {
+      <div class="empty-state">در حال پردازش گراف در موتور Rust...</div>
+    }
+    <div #cyContainer class="cy-canvas"></div>
+  </div>
+</div>
