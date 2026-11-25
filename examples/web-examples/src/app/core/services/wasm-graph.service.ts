@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import init, { WasmGraphEngine } from '../wasm/graph';
-import { GraphSnapshot } from '../models/graph-engine.model';
+import { ConductanceReport, GraphSnapshot } from '../models/graph-engine.model';
 
 @Injectable({ providedIn: 'root' })
 export class WasmGraphService {
@@ -38,6 +38,22 @@ export class WasmGraphService {
       this.error.set(null);
     } catch (err) {
       this.error.set(String(err));
+    }
+  }
+
+  getConductanceDetails(indices: number[]): { report: ConductanceReport; timeMs: number } | null {
+    if (!this.engine) return null;
+    try {
+      const start = performance.now();
+      const json = this.engine.get_conductance_details(new Uint32Array(indices));
+      const timeMs = performance.now() - start;
+      return {
+        report: JSON.parse(json) as ConductanceReport,
+        timeMs,
+      };
+    } catch (err) {
+      console.error('Conductance calculation failed:', err);
+      return null;
     }
   }
 }

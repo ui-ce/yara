@@ -5,6 +5,7 @@ export const __wbg_wasmgraphengine_free: (a: number, b: number) => void;
 export const wasmgraphengine_add_edge: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const wasmgraphengine_add_node: (a: number, b: number, c: number) => void;
 export const wasmgraphengine_get_conductance: (a: number, b: number, c: number) => number;
+export const wasmgraphengine_get_conductance_details: (a: number, b: number, c: number) => [number, number, number, number];
 export const wasmgraphengine_get_snapshot: (a: number) => [number, number, number, number];
 export const wasmgraphengine_load_from_text: (a: number, b: number, c: number) => [number, number, number, number];
 export const wasmgraphengine_new: (a: number) => number;

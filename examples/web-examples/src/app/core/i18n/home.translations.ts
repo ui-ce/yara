@@ -35,7 +35,10 @@ export const HOME_TRANSLATIONS: TranslationDictionary = {
     en: 'A simple comparison-based sorting algorithm where each pair of adjacent elements is compared and swapped if they are in the wrong order.',
   },
 
-  'home.algorithm.binarySearch.name': { fa: 'جست‌وجوی دودویی (Binary Search)', en: 'Binary Search' },
+  'home.algorithm.binarySearch.name': {
+    fa: 'جست‌وجوی دودویی (Binary Search)',
+    en: 'Binary Search',
+  },
   'home.algorithm.binarySearch.class': { fa: 'جست‌وجو', en: 'Searching' },
   'home.algorithm.binarySearch.description': {
     fa: 'الگوریتمی کارآمد برای یافتن یک مقدار هدف در آرایه‌ای مرتب، با تقسیم مکرر بازه جست‌وجو به دو نیم.',
@@ -49,14 +52,20 @@ export const HOME_TRANSLATIONS: TranslationDictionary = {
     en: 'A divide-and-conquer sorting algorithm that partitions the array around a pivot so smaller values end up on its left and larger values on its right, then recursively sorts each side.',
   },
 
-  'home.algorithm.selectionSort.name': { fa: 'مرتب‌سازی انتخابی (Selection Sort)', en: 'Selection Sort' },
+  'home.algorithm.selectionSort.name': {
+    fa: 'مرتب‌سازی انتخابی (Selection Sort)',
+    en: 'Selection Sort',
+  },
   'home.algorithm.selectionSort.class': { fa: 'مرتب‌سازی', en: 'Sorting' },
   'home.algorithm.selectionSort.description': {
     fa: 'الگوریتم مرتب‌سازی که به‌طور مکرر بخش مرتب‌نشده آرایه را برای یافتن کوچک‌ترین مقدار جست‌وجو کرده و آن را در ابتدای این بخش جای می‌دهد.',
     en: 'A sorting algorithm that repeatedly scans the unsorted part of the array for its smallest value and swaps it into place at the front of that region.',
   },
 
-  'home.algorithm.insertionSort.name': { fa: 'مرتب‌سازی درجی (Insertion Sort)', en: 'Insertion Sort' },
+  'home.algorithm.insertionSort.name': {
+    fa: 'مرتب‌سازی درجی (Insertion Sort)',
+    en: 'Insertion Sort',
+  },
   'home.algorithm.insertionSort.class': { fa: 'مرتب‌سازی', en: 'Sorting' },
   'home.algorithm.insertionSort.description': {
     fa: 'الگوریتم مرتب‌سازی که ناحیه‌ای مرتب را عنصر به عنصر می‌سازد؛ هر عنصر جدید را در جایگاه درست خود میان عناصر پیش‌تر مرتب‌شده قرار می‌دهد.',
@@ -68,6 +77,19 @@ export const HOME_TRANSLATIONS: TranslationDictionary = {
   'home.algorithm.dijkstra.description': {
     fa: 'الگوریتم مسیریابی که کوتاه‌ترین مسیر بین گره‌ها را با استفاده از فاصله میان آن‌ها می‌یابد.',
     en: 'A pathfinding algorithm that finds the shortest path between nodes using distance between nodes.',
+  },
+
+  'home.algorithm.graphExplorer.name': {
+    fa: 'کاوشگر گراف و رسانایی',
+    en: 'Graph Conductance',
+  },
+  'home.algorithm.graphExplorer.class': {
+    fa: 'گراف / تحلیل ساختاری',
+    en: 'Graph / Analysis',
+  },
+  'home.algorithm.graphExplorer.description': {
+    fa: 'آپلود گراف‌های واقعی و محاسبه رسانایی (Conductance) زیرمجموعه‌ها با موتور Rust/Wasm.',
+    en: 'Upload graphs and analyze subset conductance in real time with a Rust/Wasm engine.',
   },
 
   'home.algorithm.linearSearch.name': { fa: 'جست‌وجوی خطی (Linear Search)', en: 'Linear Search' },
