@@ -1,129 +1,307 @@
-<div class="explorer-page" dir="rtl">
-  <header class="page-header">
-    <div>
-      <h1>کاوشگر گراف (Rust / Wasm)</h1>
-      <p class="subtitle">آپلود و تحلیل رسانایی (Conductance) گراف‌های جهت‌دار، بدون جهت و وزن‌دار</p>
-    </div>
+<div class="algo-explorer-page">
+  <algo-header
+    [breadcrumbs]="breadcrumbs()"
+    [themeMode]="themeService.themeMode()"
+    (themeToggle)="themeService.toggle()"
+    [currentLanguage]="languageService.currentLanguage()"
+    (languageToggle)="languageService.toggle()"
+  />
 
-    <div class="actions">
-      <label class="btn btn-primary">
-        <span>آپلود فایل گراف</span>
-        <input type="file" accept=".txt,.csv,.edgelist" (change)="onFileSelected($event)" hidden />
-      </label>
+  <div class="algo-explorer-page__main-row">
+    <algo-drawer
+      [isOpen]="activeDrawerSection() !== null"
+      [title]="drawerPanelTitle()"
+      (closed)="closeDrawer()"
+    >
+      <ng-container icon-buttons>
+        <algo-drawer-icon-button
+          [selected]="activeDrawerSection() === 'data'"
+          (toggle)="toggleDrawerSection('data')"
+        >
+          <svg icon solarDownloadLinear [size]="24"></svg>
+        </algo-drawer-icon-button>
 
-      <button type="button" class="btn btn-secondary" (click)="loadSample()" [disabled]="isLoading()">
-        گراف نمونه
-      </button>
+        <algo-drawer-icon-button
+          [selected]="activeDrawerSection() === 'stats'"
+          (toggle)="toggleDrawerSection('stats')"
+        >
+          <svg icon solarChartLinear [size]="24"></svg>
+        </algo-drawer-icon-button>
+      </ng-container>
 
-      @if (viewData(); as data) {
-        <button type="button" class="btn btn-outline" (click)="toggleDirection()">
-          {{ data.snap.is_directed ? 'جهت‌دار (تغییر به بدون جهت)' : 'بدون جهت (تغییر به جهت‌دار)' }}
-        </button>
-      }
-    </div>
-  </header>
+      <div panel-content class="algo-explorer-page__drawer-body">
+        @switch (activeDrawerSection()) { @case ('data') {
+        <div class="algo-explorer-page__drawer-group">
+          <p class="text-label-medium-regular algo-explorer-page__drawer-label">
+            {{ 'graphExplorer.upload.label' | translate }}
+          </p>
+          <label class="algo-explorer-page__upload-trigger text-body-medium">
+            <input
+              type="file"
+              accept=".txt,.csv,.edgelist,.edges"
+              (change)="onFileSelected($event)"
+              hidden
+            />
+            {{ 'graphExplorer.upload.button' | translate }}
+          </label>
 
-  @if (viewData(); as data) {
-    <div class="stats-bar">
-      @if (fileName(); as name) {
-        <span class="badge badge-file">{{ name }}</span>
-      }
-      <span class="badge">راس‌ها: <strong>{{ data.snap.nodes.length }}</strong></span>
-      <span class="badge">یال‌ها: <strong>{{ data.snap.edges.length }}</strong></span>
-      <span class="badge">{{ data.snap.is_weighted ? 'وزن‌دار' : 'بدون وزن' }}</span>
-      <span class="badge">{{ data.snap.is_directed ? 'جهت‌دار' : 'بدون جهت' }}</span>
-      @if (parseTimeMs() !== null) {
-        <span class="badge badge-speed">پردازش Rust: {{ parseTimeMs() }}ms</span>
-      }
-    </div>
-
-    <section class="conductance-panel">
-      <div class="conductance-controls">
-        <div class="panel-title">
-          <strong>تحلیل رسانایی زیرمجموعه S</strong>
-          <span class="hint">برای ساخت زیرمجموعه S روی راس‌ها کلیک کنید یا از دکمه‌های سریع استفاده کنید</span>
+          <label class="algo-explorer-page__checkbox-row text-body-medium">
+            <input
+              type="checkbox"
+              [checked]="wasm.snapshot()?.is_directed ?? false"
+              (change)="onDirectedToggle($event)"
+            />
+            <span>{{ 'graphExplorer.options.directed' | translate }}</span>
+          </label>
         </div>
 
-        <div class="quick-buttons">
-          <button type="button" class="btn btn-sm btn-secondary" (click)="selectFirstHalf()">
-            نیمه اول راس‌ها
-          </button>
-          <button type="button" class="btn btn-sm btn-secondary" (click)="selectRandomQuarter()">
-            تصادفی ۲۵٪
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-danger"
-            (click)="clearSelection()"
-            [disabled]="selectedIndices().size === 0"
-          >
-            پاک کردن ({{ selectedIndices().size }})
-          </button>
+        <div class="algo-explorer-page__drawer-group">
+          <p class="text-label-medium-regular algo-explorer-page__drawer-label">
+            {{ 'graphExplorer.samples.title' | translate }}
+          </p>
+          <algo-button
+            variant="outline"
+            size="default"
+            [fullWidth]="true"
+            [text]="'graphExplorer.samples.communities' | translate"
+            (click)="loadSample('communities')"
+          />
+          <algo-button
+            variant="outline"
+            size="default"
+            [fullWidth]="true"
+            [text]="'graphExplorer.samples.weighted' | translate"
+            (click)="loadSample('weighted')"
+          />
+        </div>
+
+        @if (wasm.error()) {
+        <p class="algo-explorer-page__error text-body-medium">{{ wasm.error() }}</p>
+        } } @case ('stats') { @if (wasm.stats(); as st) {
+        <dl class="algo-explorer-page__stats-list text-body-medium">
+          <div class="algo-explorer-page__stat-row">
+            <dt>{{ 'graphExplorer.stats.nodes' | translate }}</dt>
+            <dd>{{ st.node_count }}</dd>
+          </div>
+          <div class="algo-explorer-page__stat-row">
+            <dt>{{ 'graphExplorer.stats.edges' | translate }}</dt>
+            <dd>{{ st.edge_count }}</dd>
+          </div>
+          <div class="algo-explorer-page__stat-row">
+            <dt>{{ 'graphExplorer.stats.avgDegree' | translate }}</dt>
+            <dd>{{ st.average_degree | number: '1.2-2' }}</dd>
+          </div>
+          <div class="algo-explorer-page__stat-row">
+            <dt>{{ 'graphExplorer.stats.components' | translate }}</dt>
+            <dd>{{ st.component_count }}</dd>
+          </div>
+          <div class="algo-explorer-page__stat-row">
+            <dt>{{ 'graphExplorer.stats.connected' | translate }}</dt>
+            <dd>
+              {{ (st.is_connected ? 'graphExplorer.stats.yes' : 'graphExplorer.stats.no') |
+              translate }}
+            </dd>
+          </div>
+          <div class="algo-explorer-page__stat-row">
+            <dt>{{ 'graphExplorer.stats.hasCycle' | translate }}</dt>
+            <dd>
+              {{ (st.has_cycle ? 'graphExplorer.stats.yes' : 'graphExplorer.stats.no') | translate
+              }}
+            </dd>
+          </div>
+        </dl>
+        } } }
+      </div>
+    </algo-drawer>
+
+    <div class="algo-explorer-page__content">
+      <div class="algo-explorer-page__sections-layer">
+        <div class="algo-explorer-page__title-row">
+          <div class="algo-explorer-page__title-group">
+            <h1 class="algo-explorer-page__title text-title-large">
+              {{ 'graphExplorer.title' | translate }}
+            </h1>
+            @if (lastComputeMs() !== null) {
+            <span class="algo-explorer-page__rust-badge text-label-small-regular">
+              Rust/Wasm · {{ lastComputeMs() | number: '1.2-2' }} ms
+            </span>
+            }
+          </div>
+
+          <algo-segmented-button
+            [options]="algorithmTabs()"
+            [selectedIndex]="selectedAlgorithmIndex()"
+            (selectedIndexChange)="onAlgorithmTabChange($event)"
+          />
+        </div>
+
+        <div class="algo-explorer-page__param-bar">
+          @if (activeAlgorithm() === 'conductance') {
+          <span class="text-body-medium algo-explorer-page__param-hint">
+            {{ 'graphExplorer.conductance.hint' | translate }}
+          </span>
+          <div class="algo-explorer-page__param-actions">
+            <algo-button
+              variant="outline"
+              size="default"
+              [text]="'graphExplorer.conductance.firstHalf' | translate"
+              (click)="selectFirstHalf()"
+            />
+            <algo-button
+              variant="outline"
+              size="default"
+              [text]="'graphExplorer.conductance.random25' | translate"
+              (click)="selectRandomQuarter()"
+            />
+            <algo-button
+              variant="navigation"
+              size="default"
+              [text]="'graphExplorer.conductance.clear' | translate"
+              (click)="clearSelection()"
+            />
+            <algo-button
+              variant="primary"
+              size="default"
+              [text]="'graphExplorer.action.runTrace' | translate"
+              (click)="runTrace()"
+            />
+          </div>
+          } @else { @if (wasm.snapshot(); as snap) {
+          <div class="algo-explorer-page__node-pickers">
+            <label class="algo-explorer-page__select-group text-body-medium">
+              <span>{{ 'graphExplorer.traversal.start' | translate }}</span>
+              <select
+                class="algo-explorer-page__select"
+                [value]="startNode()"
+                (change)="onStartNodeChange($event)"
+              >
+                @for (label of snap.nodes; track $index) { @if ($index < 300) {
+                <option [value]="$index">{{ label }}</option>
+                } }
+              </select>
+            </label>
+
+            <label class="algo-explorer-page__select-group text-body-medium">
+              <span>{{ 'graphExplorer.traversal.target' | translate }}</span>
+              <select
+                class="algo-explorer-page__select"
+                [value]="targetNode() === null ? '' : targetNode()"
+                (change)="onTargetNodeChange($event)"
+              >
+                <option value="">{{ 'graphExplorer.traversal.none' | translate }}</option>
+                @for (label of snap.nodes; track $index) { @if ($index < 300) {
+                <option [value]="$index">{{ label }}</option>
+                } }
+              </select>
+            </label>
+
+            <button
+              type="button"
+              class="algo-explorer-page__pick-chip text-label-medium-regular"
+              [class.algo-explorer-page__pick-chip--active]="canvasPickMode() === 'start'"
+              (click)="setCanvasPickMode('start')"
+            >
+              {{ 'graphExplorer.traversal.clickStart' | translate }}
+            </button>
+            <button
+              type="button"
+              class="algo-explorer-page__pick-chip text-label-medium-regular"
+              [class.algo-explorer-page__pick-chip--active]="canvasPickMode() === 'target'"
+              (click)="setCanvasPickMode('target')"
+            >
+              {{ 'graphExplorer.traversal.clickTarget' | translate }}
+            </button>
+          </div>
+          }
+
+          <algo-button
+            variant="primary"
+            size="default"
+            [text]="'graphExplorer.action.runTrace' | translate"
+            (click)="runTrace()"
+          />
+          }
+        </div>
+
+        <div class="algo-explorer-page__graph-main-row">
+          <div class="algo-explorer-page__graph-stage">
+            <div class="algo-explorer-page__stage-header">
+              <div class="algo-explorer-page__step-counter text-label-medium-regular">
+                {{ 'graphExplorer.playback.step' | translate }}
+                <strong>{{ totalSteps() > 0 ? currentStepIndex() + 1 : 0 }}</strong> / {{
+                totalSteps() }}
+              </div>
+
+              <algo-visualization-legend [items]="legendItems()" />
+
+              <div class="algo-explorer-page__speed-group">
+                <span class="text-label-medium-regular algo-explorer-page__speed-label">
+                  {{ 'graphExplorer.playback.speed' | translate }}
+                </span>
+                <algo-speed-button [speed]="speed()" (speedChange)="onSpeedChange($event)" />
+              </div>
+            </div>
+
+            @if (activeMetrics().length > 0) {
+            <div class="algo-explorer-page__metrics-strip">
+              @for (m of activeMetrics(); track m.label) {
+              <div class="algo-explorer-page__metric-pill">
+                <span class="algo-explorer-page__metric-key text-label-small-regular">
+                  {{ m.label }}
+                </span>
+                <span class="algo-explorer-page__metric-val text-body-medium-emphasized">
+                  {{ m.value }}
+                </span>
+              </div>
+              }
+            </div>
+            } @if (traceResult()?.truncated) {
+            <div class="algo-explorer-page__truncated-banner text-label-medium-regular">
+              {{ 'graphExplorer.playback.truncated' | translate }}
+            </div>
+            } @if (isLargeGraph()) {
+            <div class="algo-explorer-page__preview-banner text-label-medium-regular">
+              {{ formatLargeGraphNotice() }}
+            </div>
+            }
+
+            <div class="algo-explorer-page__canvas-wrap">
+              <div #cyContainer class="algo-explorer-page__cy-canvas"></div>
+            </div>
+          </div>
+
+          <div class="algo-explorer-page__pseudocode-column">
+            <algo-pseudocode-section
+              orientation="column"
+              [lines]="pseudocodeLines()"
+              [activeLineNumber]="activeLineNumber()"
+              [explanationTitle]="explanationTitle()"
+              [explanationDescription]="explanationDescription()"
+            />
+          </div>
+        </div>
+
+        <div class="algo-explorer-page__controls-bar">
+          <algo-navigation-controls
+            [isPlaying]="isPlaying()"
+            (previous)="onPrevious()"
+            (playToggle)="onPlayToggle()"
+            (next)="onNext()"
+            (again)="onAgain()"
+          />
+
+          @if (totalSteps() > 1) {
+          <input
+            type="range"
+            class="algo-explorer-page__scrubber"
+            [min]="0"
+            [max]="totalSteps() - 1"
+            [value]="currentStepIndex()"
+            (input)="onScrub($event)"
+          />
+          }
         </div>
       </div>
-
-      @if (conductanceResult(); as res) {
-        <div class="metrics-grid">
-          <div class="metric-card metric-primary">
-            <span class="metric-label">رسانایی φ(S)</span>
-            <strong class="metric-value">{{ formatNumber(res.report.conductance, 4) }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">اندازه |S|</span>
-            <strong class="metric-value">
-              {{ res.report.subset_size }} / {{ data.snap.nodes.length }}
-            </strong>
-          </div>
-          <div class="metric-card metric-cut">
-            <span class="metric-label">برش (وزن / تعداد یال)</span>
-            <strong class="metric-value">
-              {{ formatNumber(res.report.cut_weight, 2) }} ({{ res.report.cut_edge_count }})
-            </strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">حجم vol(S)</span>
-            <strong class="metric-value">{{ formatNumber(res.report.vol_s, 2) }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">حجم vol(V \ S)</span>
-            <strong class="metric-value">{{ formatNumber(res.report.vol_rest, 2) }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">زمان محاسبه Rust</span>
-            <strong class="metric-value">{{ formatNumber(res.timeMs, 2) }}ms</strong>
-          </div>
-        </div>
-      } @else {
-        <div class="conductance-empty">
-          هیچ راسی انتخاب نشده است — روی راس‌های گراف کلیک کنید (سبز = عضو S، خط‌چین قرمز = یال برش).
-        </div>
-      }
-    </section>
-
-    @if (data.isTruncated) {
-      <div class="notice-box">
-        برای جلوگیری از کند شدن مرورگر، پیش‌نمایش
-        <strong>{{ data.visibleNodes.length }}</strong> راس و
-        <strong>{{ data.visibleEdges.length }}</strong> یال اول نمایش داده شده است.
-        محاسبه رسانایی همچنان روی کل گراف (<strong>{{ data.snap.nodes.length }}</strong> راس و
-        <strong>{{ data.snap.edges.length }}</strong> یال) در Rust انجام می‌شود.
-      </div>
-    }
-  }
-
-  @if (graphService.error(); as err) {
-    <div class="error-box">{{ err }}</div>
-  }
-
-  <div class="canvas-wrapper">
-    @if (!viewData() && !isLoading()) {
-      <div class="empty-state">
-        یک فایل گراف (`.txt` یا `.csv`) آپلود کنید یا «گراف نمونه» را بزنید.
-      </div>
-    }
-    @if (isLoading()) {
-      <div class="empty-state">در حال پردازش گراف در موتور Rust...</div>
-    }
-    <div #cyContainer class="cy-canvas"></div>
+    </div>
   </div>
 </div>
