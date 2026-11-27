@@ -195,6 +195,28 @@ export class WasmGraphEngine {
         }
     }
     /**
+     * @param {number} max_steps
+     * @returns {string}
+     */
+    trace_components(max_steps) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.wasmgraphengine_trace_components(this.__wbg_ptr, max_steps);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * @param {Uint32Array | number[]} subset_indices
      * @param {number} max_steps
      * @returns {string}
@@ -222,6 +244,29 @@ export class WasmGraphEngine {
     }
     /**
      * @param {number} start_node
+     * @param {number} max_steps
+     * @returns {string}
+     */
+    trace_dfs_cycle(start_node, max_steps) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.wasmgraphengine_trace_dfs_cycle(this.__wbg_ptr, start_node, max_steps);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @param {number} start_node
      * @param {number} target_node
      * @param {number} max_steps
      * @returns {string}
@@ -231,6 +276,51 @@ export class WasmGraphEngine {
         let deferred2_1;
         try {
             const ret = wasm.wasmgraphengine_trace_dijkstra(this.__wbg_ptr, start_node, target_node, max_steps);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @param {number} max_steps
+     * @returns {string}
+     */
+    trace_kruskal(max_steps) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.wasmgraphengine_trace_kruskal(this.__wbg_ptr, max_steps);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @param {number} start_node
+     * @param {number} max_steps
+     * @returns {string}
+     */
+    trace_prim(start_node, max_steps) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.wasmgraphengine_trace_prim(this.__wbg_ptr, start_node, max_steps);
             var ptr1 = ret[0];
             var len1 = ret[1];
             if (ret[3]) {

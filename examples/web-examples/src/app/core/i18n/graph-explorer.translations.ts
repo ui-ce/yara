@@ -206,4 +206,136 @@ export const GRAPH_EXPLORER_TRANSLATIONS: TranslationDictionary = {
     fa: 'الگوریتم پایان یافت. تعداد رئوس قطعی‌شده: {{settled}}.',
     en: 'Dijkstra finished. Total settled nodes: {{settled}}.',
   },
+  'graphExplorer.algo.dfs_cycle': { fa: 'تشخیص دور (DFS)', en: 'DFS Cycle' },
+  'graphExplorer.algo.components': { fa: 'مؤلفه‌های همبندی', en: 'Components' },
+  'graphExplorer.algo.prim': { fa: 'پریم (MST)', en: 'Prim MST' },
+  'graphExplorer.algo.kruskal': { fa: 'کروسکال (MST)', en: 'Kruskal MST' },
+
+  'graphExplorer.samples.disconnected': {
+    fa: 'گراف ناهمبند (۳ مؤلفه مجزا)',
+    en: 'Disconnected Graph (3 Components)',
+  },
+  'graphExplorer.startOnly.hint': {
+    fa: 'راس شروع را انتخاب کنید (یا روی بوم کلیک کنید) و تریس را ببینید.',
+    en: 'Select a start node (or click any node on canvas) to trace.',
+  },
+  'graphExplorer.globalAlgo.hint': {
+    fa: 'این الگوریتم به‌صورت خودکار روی کل گراف اجرا می‌شود.',
+    en: 'This algorithm runs globally across the entire graph.',
+  },
+
+  // New live metrics
+  'graphExplorer.metric.stackDepth': { fa: 'عمق پشته', en: 'Stack Depth' },
+  'graphExplorer.metric.cycleStatus': { fa: 'وضعیت دور', en: 'Cycle' },
+  'graphExplorer.metric.components': { fa: 'تعداد مؤلفه', en: 'Components' },
+  'graphExplorer.metric.currentCompSize': { fa: 'اندازه مؤلفه فعلی', en: 'Comp. Size' },
+  'graphExplorer.metric.mstEdges': { fa: 'یال‌های MST', en: 'MST Edges' },
+  'graphExplorer.metric.totalWeight': { fa: 'مجموع وزن', en: 'Total Weight' },
+  'graphExplorer.metric.rejectedEdges': { fa: 'یال‌های ردشده', en: 'Rejected' },
+
+  // New legend items
+  'graphExplorer.legend.cycle': { fa: 'دور یافت‌شده', en: 'Cycle Detected' },
+  'graphExplorer.legend.mst': { fa: 'عضو درخت MST', en: 'In MST' },
+  'graphExplorer.legend.rejected': { fa: 'ردشده (ایجاد دور)', en: 'Rejected (Cycle)' },
+  'graphExplorer.legend.frontier': { fa: 'یال کاندید (Heap)', en: 'Candidate Edge' },
+  'graphExplorer.legend.comp0': { fa: 'مؤلفه ۱', en: 'Component 1' },
+  'graphExplorer.legend.comp1': { fa: 'مؤلفه ۲', en: 'Component 2' },
+  'graphExplorer.legend.comp2': { fa: 'مؤلفه ۳', en: 'Component 3' },
+  'graphExplorer.legend.comp3': { fa: 'مؤلفه ۴+', en: 'Component 4+' },
+
+  // Trace messages — DFS Cycle
+  'trace.dfsCycle.init.title': { fa: 'شروع تشخیص دور (DFS)', en: 'Start DFS Cycle Check' },
+  'trace.dfsCycle.init.msg': {
+    fa: 'پیمایش DFS از راس {{start}} آغاز شد و در پشته قرار گرفت.',
+    en: 'Started DFS from node {{start}} and marked it as visiting.',
+  },
+  'trace.dfsCycle.discover.title': { fa: 'پیشروی عمقی', en: 'Descend to Neighbor' },
+  'trace.dfsCycle.discover.msg': {
+    fa: 'از {{u}} به همسایه دیده‌نشده {{v}} رفتیم و وارد پشته شد.',
+    en: 'Moved from {{u}} to unvisited neighbor {{v}} and pushed onto stack.',
+  },
+  'trace.dfsCycle.backtrack.title': { fa: 'عقب‌گرد (Backtrack)', en: 'Backtrack' },
+  'trace.dfsCycle.backtrack.msg': {
+    fa: 'همه همسایگان {{node}} بررسی شدند؛ از پشته خارج و تکمیل شد.',
+    en: 'Finished all neighbors of {{node}}; popped from stack and marked visited.',
+  },
+  'trace.dfsCycle.found.title': { fa: 'دور شناسایی شد!', en: 'Cycle Detected!' },
+  'trace.dfsCycle.found.msg': {
+    fa: 'یال بازگشتی ({{u}}, {{v}}) به یک راس فعال روی مسیر رسید و دور تشکیل داد.',
+    en: 'Back-edge ({{u}}, {{v}}) closes a cycle along the active recursion path.',
+  },
+  'trace.dfsCycle.none.title': { fa: 'دوری یافت نشد', en: 'No Cycle Found' },
+  'trace.dfsCycle.none.msg': {
+    fa: 'پیمایش {{visited}} راس دسترس‌پذیر بدون برخورد به دور پایان یافت.',
+    en: 'Explored {{visited}} reachable nodes with no cycles detected.',
+  },
+
+  // Trace messages — Connected Components
+  'trace.components.init.title': { fa: 'شروع یافتن مؤلفه‌ها', en: 'Start Connected Components' },
+  'trace.components.init.msg': {
+    fa: 'آماده پیمایش {{totalNodes}} راس برای تفکیک مؤلفه‌های همبندی.',
+    en: 'Ready to scan {{totalNodes}} nodes and partition connected components.',
+  },
+  'trace.components.new.title': { fa: 'کشف مؤلفه جدید #{{comp}}', en: 'New Component #{{comp}}' },
+  'trace.components.new.msg': {
+    fa: 'راس دیده‌نشده {{node}} به‌عنوان شروع مؤلفه شماره {{comp}} انتخاب شد.',
+    en: 'Unvisited node {{node}} starts connected component #{{comp}}.',
+  },
+  'trace.components.expand.title': {
+    fa: 'گسترش مؤلفه #{{comp}}',
+    en: 'Expand Component #{{comp}}',
+  },
+  'trace.components.expand.msg': {
+    fa: 'راس {{v}} از طریق {{u}} به مؤلفه شماره {{comp}} اضافه شد.',
+    en: 'Reached {{v}} from {{u}} and assigned it to component #{{comp}}.',
+  },
+  'trace.components.done.title': { fa: 'پایان تفکیک مؤلفه‌ها', en: 'Components Complete' },
+  'trace.components.done.msg': {
+    fa: 'کل گراف به {{components}} مؤلفه همبندی ({{visited}} راس) تقسیم شد.',
+    en: 'Partitioned all {{visited}} nodes into {{components}} connected component(s).',
+  },
+
+  // Trace messages — Prim MST
+  'trace.prim.init.title': { fa: 'شروع الگوریتم پریم', en: 'Start Prim MST' },
+  'trace.prim.init.msg': {
+    fa: 'راس {{start}} وارد درخت MST شد و {{heapSize}} یال مجاورش به Min-Heap اضافه شدند.',
+    en: 'Added {{start}} to the MST and pushed {{heapSize}} incident edges to the Min-Heap.',
+  },
+  'trace.prim.accept.title': { fa: 'افزودن یال به MST', en: 'Accept MST Edge' },
+  'trace.prim.accept.msg': {
+    fa: 'کم‌وزن‌ترین یال ({{u}}, {{v}}) با وزن {{w}} به MST اضافه شد. مجموع وزن: {{totalWeight}}.',
+    en: 'Added minimum frontier edge ({{u}}, {{v}}) of weight {{w}}. Total weight: {{totalWeight}}.',
+  },
+  'trace.prim.skip.title': { fa: 'رد کردن یال داخلی', en: 'Skip Stale Edge' },
+  'trace.prim.skip.msg': {
+    fa: 'یال ({{u}}, {{v}}) با وزن {{w}} رد شد چون راس {{v}} قبلاً عضو MST است.',
+    en: 'Skipped edge ({{u}}, {{v}}) of weight {{w}} because {{v}} is already in the MST.',
+  },
+  'trace.prim.done.title': { fa: 'ساخت MST کامل شد', en: 'Prim MST Complete' },
+  'trace.prim.done.msg': {
+    fa: 'درخت پوشای کمینه با {{mstEdges}} یال و مجموع وزن {{totalWeight}} ساخته شد.',
+    en: 'Built MST with {{mstEdges}} edges and total weight {{totalWeight}}.',
+  },
+
+  // Trace messages — Kruskal MST
+  'trace.kruskal.init.title': { fa: 'مرتب‌سازی یال‌ها (کروسکال)', en: 'Sort Edges (Kruskal)' },
+  'trace.kruskal.init.msg': {
+    fa: '{{edgeCount}} یال بر اساس وزن مرتب شدند و ساختار Union-Find مقداردهی شد.',
+    en: 'Sorted {{edgeCount}} edges by weight and initialized Disjoint Set Union (DSU).',
+  },
+  'trace.kruskal.accept.title': { fa: 'ادغام دو مؤلفه در MST', en: 'Union & Accept Edge' },
+  'trace.kruskal.accept.msg': {
+    fa: 'یال ({{u}}, {{v}}) با وزن {{w}} دور نمی‌سازد؛ به MST اضافه شد (مجموع: {{totalWeight}}).',
+    en: 'Edge ({{u}}, {{v}}) of weight {{w}} joins two sets; added to MST (total: {{totalWeight}}).',
+  },
+  'trace.kruskal.reject.title': { fa: 'رد یال (ایجاد دور)', en: 'Reject Edge (Cycle)' },
+  'trace.kruskal.reject.msg': {
+    fa: 'یال ({{u}}, {{v}}) با وزن {{w}} رد شد چون هر دو سر آن در یک مجموعه هستند.',
+    en: 'Rejected ({{u}}, {{v}}) of weight {{w}} because both endpoints are already connected.',
+  },
+  'trace.kruskal.done.title': { fa: 'پایان الگوریتم کروسکال', en: 'Kruskal MST Complete' },
+  'trace.kruskal.done.msg': {
+    fa: 'جنگل/درخت پوشای کمینه با {{mstEdges}} یال و مجموع وزن {{totalWeight}} آماده است.',
+    en: 'Finished MST with {{mstEdges}} edges and total weight {{totalWeight}}.',
+  },
 };

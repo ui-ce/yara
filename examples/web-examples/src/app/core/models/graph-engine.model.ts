@@ -66,4 +66,11 @@ export interface TraceResult {
   summary: Record<string, string>;
 }
 
-export type GraphExplorerAlgorithm = 'conductance' | 'bfs' | 'dijkstra';
+export type GraphExplorerAlgorithm =
+  | 'conductance'
+  | 'bfs'
+  | 'dijkstra'
+  | 'dfs_cycle'
+  | 'components'
+  | 'prim'
+  | 'kruskal';

@@ -12,8 +12,12 @@ export const wasmgraphengine_load_from_text: (a: number, b: number, c: number) =
 export const wasmgraphengine_new: (a: number) => number;
 export const wasmgraphengine_set_directed: (a: number, b: number) => [number, number, number, number];
 export const wasmgraphengine_trace_bfs: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const wasmgraphengine_trace_components: (a: number, b: number) => [number, number, number, number];
 export const wasmgraphengine_trace_conductance: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const wasmgraphengine_trace_dfs_cycle: (a: number, b: number, c: number) => [number, number, number, number];
 export const wasmgraphengine_trace_dijkstra: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const wasmgraphengine_trace_kruskal: (a: number, b: number) => [number, number, number, number];
+export const wasmgraphengine_trace_prim: (a: number, b: number, c: number) => [number, number, number, number];
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
