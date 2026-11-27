@@ -1,6 +1,7 @@
 pub mod functions;
 pub mod model;
 pub mod parser;
+pub mod trace;
 
 use crate::functions::GraphAnalyze;
 use crate::model::Graph;
@@ -167,6 +168,50 @@ impl WasmGraphEngine {
         };
 
         serde_json::to_string(&report).map_err(|e| e.to_string())
+    }
+
+    pub fn get_graph_stats(&self) -> Result<String, String> {
+        let stats = trace::compute_graph_stats(&self.graph);
+        serde_json::to_string(&stats).map_err(|e| e.to_string())
+    }
+
+    pub fn trace_conductance(
+        &self,
+        subset_indices: &[usize],
+        max_steps: usize,
+    ) -> Result<String, String> {
+        let result = trace::trace_conductance(&self.graph, subset_indices, max_steps);
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    }
+
+    pub fn trace_bfs(
+        &self,
+        start_node: usize,
+        target_node: i32,
+        max_steps: usize,
+    ) -> Result<String, String> {
+        let target = if target_node < 0 {
+            None
+        } else {
+            Some(target_node as usize)
+        };
+        let result = trace::trace_bfs(&self.graph, start_node, target, max_steps)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    }
+
+    pub fn trace_dijkstra(
+        &self,
+        start_node: usize,
+        target_node: i32,
+        max_steps: usize,
+    ) -> Result<String, String> {
+        let target = if target_node < 0 {
+            None
+        } else {
+            Some(target_node as usize)
+        };
+        let result = trace::trace_dijkstra(&self.graph, start_node, target, max_steps)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
     }
 }
 

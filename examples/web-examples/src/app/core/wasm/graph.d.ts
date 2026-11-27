@@ -8,10 +8,14 @@ export class WasmGraphEngine {
     add_node(id: string): void;
     get_conductance(subset_indices: Uint32Array | number[]): number;
     get_conductance_details(subset_indices: Uint32Array | number[]): string;
+    get_graph_stats(): string;
     get_snapshot(): string;
     load_from_text(content: string): string;
     constructor(is_directed: boolean);
     set_directed(is_directed: boolean): string;
+    trace_bfs(start_node: number, target_node: number, max_steps: number): string;
+    trace_conductance(subset_indices: Uint32Array | number[], max_steps: number): string;
+    trace_dijkstra(start_node: number, target_node: number, max_steps: number): string;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -23,10 +27,14 @@ export interface InitOutput {
     readonly wasmgraphengine_add_node: (a: number, b: number, c: number) => void;
     readonly wasmgraphengine_get_conductance: (a: number, b: number, c: number) => number;
     readonly wasmgraphengine_get_conductance_details: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly wasmgraphengine_get_graph_stats: (a: number) => [number, number, number, number];
     readonly wasmgraphengine_get_snapshot: (a: number) => [number, number, number, number];
     readonly wasmgraphengine_load_from_text: (a: number, b: number, c: number) => [number, number, number, number];
     readonly wasmgraphengine_new: (a: number) => number;
     readonly wasmgraphengine_set_directed: (a: number, b: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_bfs: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_conductance: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_dijkstra: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
