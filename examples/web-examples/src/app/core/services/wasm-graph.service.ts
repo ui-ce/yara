@@ -134,4 +134,55 @@ export class WasmGraphService {
       return null;
     }
   }
+  traceDfsCycle(startNode: number, maxSteps = 500): { result: TraceResult; timeMs: number } | null {
+    if (!this.engine) return null;
+    try {
+      const start = performance.now();
+      const json = this.engine.trace_dfs_cycle(startNode, maxSteps);
+      const timeMs = performance.now() - start;
+      return { result: JSON.parse(json) as TraceResult, timeMs };
+    } catch (err) {
+      this.error.set(String(err));
+      return null;
+    }
+  }
+
+  traceComponents(maxSteps = 500): { result: TraceResult; timeMs: number } | null {
+    if (!this.engine) return null;
+    try {
+      const start = performance.now();
+      const json = this.engine.trace_components(maxSteps);
+      const timeMs = performance.now() - start;
+      return { result: JSON.parse(json) as TraceResult, timeMs };
+    } catch (err) {
+      this.error.set(String(err));
+      return null;
+    }
+  }
+
+  tracePrim(startNode: number, maxSteps = 500): { result: TraceResult; timeMs: number } | null {
+    if (!this.engine) return null;
+    try {
+      const start = performance.now();
+      const json = this.engine.trace_prim(startNode, maxSteps);
+      const timeMs = performance.now() - start;
+      return { result: JSON.parse(json) as TraceResult, timeMs };
+    } catch (err) {
+      this.error.set(String(err));
+      return null;
+    }
+  }
+
+  traceKruskal(maxSteps = 500): { result: TraceResult; timeMs: number } | null {
+    if (!this.engine) return null;
+    try {
+      const start = performance.now();
+      const json = this.engine.trace_kruskal(maxSteps);
+      const timeMs = performance.now() - start;
+      return { result: JSON.parse(json) as TraceResult, timeMs };
+    } catch (err) {
+      this.error.set(String(err));
+      return null;
+    }
+  }
 }

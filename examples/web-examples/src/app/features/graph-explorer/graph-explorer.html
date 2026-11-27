@@ -73,6 +73,13 @@
             [text]="'graphExplorer.samples.weighted' | translate"
             (click)="loadSample('weighted')"
           />
+          <algo-button
+            variant="outline"
+            size="default"
+            [fullWidth]="true"
+            [text]="'graphExplorer.samples.disconnected' | translate"
+            (click)="loadSample('disconnected')"
+          />
         </div>
 
         @if (wasm.error()) {
@@ -128,15 +135,24 @@
             }
           </div>
 
-          <algo-segmented-button
-            [options]="algorithmTabs()"
-            [selectedIndex]="selectedAlgorithmIndex()"
-            (selectedIndexChange)="onAlgorithmTabChange($event)"
-          />
+          <div class="algo-explorer-page__algo-tabs" role="tablist">
+            @for (opt of algorithmOptions(); track opt.id) {
+            <button
+              type="button"
+              role="tab"
+              class="algo-explorer-page__algo-tab text-label-medium-regular"
+              [attr.aria-selected]="activeAlgorithm() === opt.id"
+              [class.algo-explorer-page__algo-tab--active]="activeAlgorithm() === opt.id"
+              (click)="onSelectAlgorithm(opt.id)"
+            >
+              {{ opt.label }}
+            </button>
+            }
+          </div>
         </div>
 
         <div class="algo-explorer-page__param-bar">
-          @if (activeAlgorithm() === 'conductance') {
+          @switch (activeAlgorithm()) { @case ('conductance') {
           <span class="text-body-medium algo-explorer-page__param-hint">
             {{ 'graphExplorer.conductance.hint' | translate }}
           </span>
@@ -166,7 +182,77 @@
               (click)="runTrace()"
             />
           </div>
-          } @else { @if (wasm.snapshot(); as snap) {
+          } @case ('components') {
+          <span class="text-body-medium algo-explorer-page__param-hint">
+            {{ 'graphExplorer.globalAlgo.hint' | translate }}
+          </span>
+          <algo-button
+            variant="primary"
+            size="default"
+            [text]="'graphExplorer.action.runTrace' | translate"
+            (click)="runTrace()"
+          />
+          } @case ('kruskal') {
+          <span class="text-body-medium algo-explorer-page__param-hint">
+            {{ 'graphExplorer.globalAlgo.hint' | translate }}
+          </span>
+          <algo-button
+            variant="primary"
+            size="default"
+            [text]="'graphExplorer.action.runTrace' | translate"
+            (click)="runTrace()"
+          />
+          } @case ('dfs_cycle') { @if (wasm.snapshot(); as snap) {
+          <div class="algo-explorer-page__node-pickers">
+            <label class="algo-explorer-page__select-group text-body-medium">
+              <span>{{ 'graphExplorer.traversal.start' | translate }}</span>
+              <select
+                class="algo-explorer-page__select"
+                [value]="startNode()"
+                (change)="onStartNodeChange($event)"
+              >
+                @for (label of snap.nodes; track $index) { @if ($index < 300) {
+                <option [value]="$index">{{ label }}</option>
+                } }
+              </select>
+            </label>
+            <span class="text-body-medium algo-explorer-page__param-hint">
+              {{ 'graphExplorer.startOnly.hint' | translate }}
+            </span>
+          </div>
+          }
+          <algo-button
+            variant="primary"
+            size="default"
+            [text]="'graphExplorer.action.runTrace' | translate"
+            (click)="runTrace()"
+          />
+          } @case ('prim') { @if (wasm.snapshot(); as snap) {
+          <div class="algo-explorer-page__node-pickers">
+            <label class="algo-explorer-page__select-group text-body-medium">
+              <span>{{ 'graphExplorer.traversal.start' | translate }}</span>
+              <select
+                class="algo-explorer-page__select"
+                [value]="startNode()"
+                (change)="onStartNodeChange($event)"
+              >
+                @for (label of snap.nodes; track $index) { @if ($index < 300) {
+                <option [value]="$index">{{ label }}</option>
+                } }
+              </select>
+            </label>
+            <span class="text-body-medium algo-explorer-page__param-hint">
+              {{ 'graphExplorer.startOnly.hint' | translate }}
+            </span>
+          </div>
+          }
+          <algo-button
+            variant="primary"
+            size="default"
+            [text]="'graphExplorer.action.runTrace' | translate"
+            (click)="runTrace()"
+          />
+          } @default { @if (wasm.snapshot(); as snap) {
           <div class="algo-explorer-page__node-pickers">
             <label class="algo-explorer-page__select-group text-body-medium">
               <span>{{ 'graphExplorer.traversal.start' | translate }}</span>
@@ -220,7 +306,7 @@
             [text]="'graphExplorer.action.runTrace' | translate"
             (click)="runTrace()"
           />
-          }
+          } }
         </div>
 
         <div class="algo-explorer-page__graph-main-row">

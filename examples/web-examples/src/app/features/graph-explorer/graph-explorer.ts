@@ -19,7 +19,6 @@ import type { BreadcrumbItem } from '../../layout/header/header-breadcrumb.type'
 import { AlgoDrawer } from '../../design-system/drawer/drawer';
 import { AlgoDrawerIconButton } from '../../design-system/drawer-icon-button/drawer-icon-button';
 import { AlgoButton } from '../../design-system/button/button';
-import { AlgoSegmentedButton } from '../../design-system/segmented-button/segmented-button';
 import { AlgoSpeedButton } from '../../design-system/speed-button/speed-button';
 import { NavigationControls } from '../practice/components/navigation-controls/navigation-controls';
 import { PseudocodeSection } from '../practice/components/pseudocode-section/pseudocode-section';
@@ -41,17 +40,55 @@ import type {
 import {
   ALGORITHM_PSEUDOCODE,
   SAMPLE_COMMUNITIES_GRAPH,
+  SAMPLE_DISCONNECTED_GRAPH,
   SAMPLE_WEIGHTED_GRAPH,
   getLegendForAlgorithm,
 } from './graph-explorer.data';
 
-const ALGORITHMS: readonly GraphExplorerAlgorithm[] = ['conductance', 'bfs', 'dijkstra'];
+const ALGORITHMS: readonly GraphExplorerAlgorithm[] = [
+  'conductance',
+  'bfs',
+  'dijkstra',
+  'dfs_cycle',
+  'components',
+  'prim',
+  'kruskal',
+];
 const FULL_RENDER_NODE_LIMIT = 300;
 const PREVIEW_NODE_LIMIT = 120;
 const PREVIEW_EDGE_LIMIT = 350;
 const TRACE_MAX_STEPS = 500;
-const NODE_TAGS = ['subset', 'current', 'open', 'visited', 'target', 'path'] as const;
-const EDGE_TAGS = ['cut', 'internal', 'tree', 'relaxed', 'compare', 'path'] as const;
+
+const NODE_TAGS = [
+  'subset',
+  'current',
+  'open',
+  'visited',
+  'target',
+  'path',
+  'cycle',
+  'mst',
+  'comp0',
+  'comp1',
+  'comp2',
+  'comp3',
+] as const;
+
+const EDGE_TAGS = [
+  'cut',
+  'internal',
+  'tree',
+  'relaxed',
+  'compare',
+  'path',
+  'cycle',
+  'mst',
+  'rejected',
+  'comp0',
+  'comp1',
+  'comp2',
+  'comp3',
+] as const;
 
 type DrawerSection = 'data' | 'stats' | null;
 type CanvasPickMode = 'start' | 'target';
@@ -65,7 +102,6 @@ type CanvasPickMode = 'start' | 'target';
     AlgoDrawer,
     AlgoDrawerIconButton,
     AlgoButton,
-    AlgoSegmentedButton,
     AlgoSpeedButton,
     NavigationControls,
     PseudocodeSection,
@@ -91,7 +127,7 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
   private playTimer: ReturnType<typeof setInterval> | null = null;
 
   protected readonly activeDrawerSection = signal<DrawerSection>('data');
-  protected readonly selectedAlgorithmIndex = signal<number>(0);
+  protected readonly activeAlgorithm = signal<GraphExplorerAlgorithm>('conductance');
   protected readonly selectedNodes = signal<Set<number>>(new Set());
   protected readonly startNode = signal<number>(0);
   protected readonly targetNode = signal<number | null>(null);
@@ -104,10 +140,6 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
   protected readonly lastComputeMs = signal<number | null>(null);
   protected readonly isLargeGraph = signal<boolean>(false);
   protected readonly previewNodeCount = signal<number>(0);
-
-  protected readonly activeAlgorithm = computed<GraphExplorerAlgorithm>(
-    () => ALGORITHMS[this.selectedAlgorithmIndex()] ?? 'conductance',
-  );
 
   protected readonly currentStep = computed<TraceStep | null>(() => {
     const trace = this.traceResult();
@@ -139,14 +171,15 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
     ];
   });
 
-  protected readonly algorithmTabs = computed<string[]>(() => {
-    const lang = this.languageService.currentLanguage();
-    return [
-      translate('graphExplorer.algo.conductance', lang),
-      translate('graphExplorer.algo.bfs', lang),
-      translate('graphExplorer.algo.dijkstra', lang),
-    ];
-  });
+  protected readonly algorithmOptions = computed<{ id: GraphExplorerAlgorithm; label: string }[]>(
+    () => {
+      const lang = this.languageService.currentLanguage();
+      return ALGORITHMS.map((id) => ({
+        id,
+        label: translate(`graphExplorer.algo.${id}`, lang),
+      }));
+    },
+  );
 
   protected readonly drawerPanelTitle = computed<string>(() => {
     const lang = this.languageService.currentLanguage();
@@ -174,10 +207,16 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
     const lang = this.languageService.currentLanguage();
     const step = this.currentStep();
     if (!step) return [];
-    return step.metrics.map((m) => ({
-      label: translate(`graphExplorer.metric.${m.key}`, lang),
-      value: m.value,
-    }));
+    return step.metrics.map((m) => {
+      let value = m.value;
+      if (m.key === 'cycleStatus' && (m.value === 'yes' || m.value === 'no')) {
+        value = translate(`graphExplorer.stats.${m.value}`, lang);
+      }
+      return {
+        label: translate(`graphExplorer.metric.${m.key}`, lang),
+        value,
+      };
+    });
   });
 
   constructor() {
@@ -229,20 +268,30 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
     }, 220);
   }
 
-  protected async loadSample(kind: 'communities' | 'weighted'): Promise<void> {
+  protected async loadSample(kind: 'communities' | 'weighted' | 'disconnected'): Promise<void> {
     this.stopPlayback();
-    const text = kind === 'communities' ? SAMPLE_COMMUNITIES_GRAPH : SAMPLE_WEIGHTED_GRAPH;
+    const text =
+      kind === 'communities'
+        ? SAMPLE_COMMUNITIES_GRAPH
+        : kind === 'weighted'
+          ? SAMPLE_WEIGHTED_GRAPH
+          : SAMPLE_DISCONNECTED_GRAPH;
+
     await this.wasm.loadFromText(text);
     const snap = this.wasm.snapshot();
     if (!snap) return;
 
     if (kind === 'communities') {
-      this.selectedAlgorithmIndex.set(0);
+      this.activeAlgorithm.set('conductance');
       this.selectedNodes.set(new Set([0, 1, 2, 3].filter((i) => i < snap.nodes.length)));
-    } else {
-      this.selectedAlgorithmIndex.set(2);
+    } else if (kind === 'weighted') {
+      this.activeAlgorithm.set('dijkstra');
       this.startNode.set(0);
       this.targetNode.set(snap.nodes.length > 1 ? snap.nodes.length - 1 : null);
+    } else {
+      this.activeAlgorithm.set('components');
+      this.startNode.set(0);
+      this.targetNode.set(null);
     }
 
     const large = snap.nodes.length > FULL_RENDER_NODE_LIMIT;
@@ -282,11 +331,12 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
     this.runTrace();
   }
 
-  protected onAlgorithmTabChange(index: number): void {
+  protected onSelectAlgorithm(algo: GraphExplorerAlgorithm): void {
+    if (this.activeAlgorithm() === algo) return;
     this.stopPlayback();
-    this.selectedAlgorithmIndex.set(index);
+    this.activeAlgorithm.set(algo);
     const snap = this.wasm.snapshot();
-    if (snap && index === 0 && this.selectedNodes().size === 0) {
+    if (snap && algo === 'conductance' && this.selectedNodes().size === 0) {
       this.selectFirstHalf(false);
     }
     this.runTrace();
@@ -348,19 +398,36 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
     const algo = this.activeAlgorithm();
     let output: { result: TraceResult; timeMs: number } | null = null;
 
-    if (algo === 'conductance') {
-      const indices = Array.from(this.selectedNodes());
-      if (indices.length === 0) {
-        this.traceResult.set(null);
-        this.currentStepIndex.set(0);
-        this.clearCanvasHighlights();
-        return;
+    switch (algo) {
+      case 'conductance': {
+        const indices = Array.from(this.selectedNodes());
+        if (indices.length === 0) {
+          this.traceResult.set(null);
+          this.currentStepIndex.set(0);
+          this.clearCanvasHighlights();
+          return;
+        }
+        output = this.wasm.traceConductance(indices, TRACE_MAX_STEPS);
+        break;
       }
-      output = this.wasm.traceConductance(indices, TRACE_MAX_STEPS);
-    } else if (algo === 'bfs') {
-      output = this.wasm.traceBfs(this.startNode(), this.targetNode(), TRACE_MAX_STEPS);
-    } else {
-      output = this.wasm.traceDijkstra(this.startNode(), this.targetNode(), TRACE_MAX_STEPS);
+      case 'bfs':
+        output = this.wasm.traceBfs(this.startNode(), this.targetNode(), TRACE_MAX_STEPS);
+        break;
+      case 'dijkstra':
+        output = this.wasm.traceDijkstra(this.startNode(), this.targetNode(), TRACE_MAX_STEPS);
+        break;
+      case 'dfs_cycle':
+        output = this.wasm.traceDfsCycle(this.startNode(), TRACE_MAX_STEPS);
+        break;
+      case 'components':
+        output = this.wasm.traceComponents(TRACE_MAX_STEPS);
+        break;
+      case 'prim':
+        output = this.wasm.tracePrim(this.startNode(), TRACE_MAX_STEPS);
+        break;
+      case 'kruskal':
+        output = this.wasm.traceKruskal(TRACE_MAX_STEPS);
+        break;
     }
 
     if (!output) return;
@@ -523,7 +590,6 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
   private selectPreviewNodes(snap: GraphSnapshot, trace: TraceResult | null): Set<number> {
     const chosen = new Set<number>();
 
-    // 1. Prioritize nodes and edges animated in steps 1..N (so cut edges & active traversals are visible)
     if (trace && trace.steps.length > 0) {
       for (let i = 1; i < trace.steps.length && chosen.size < PREVIEW_NODE_LIMIT; i++) {
         const step = trace.steps[i];
@@ -537,7 +603,6 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         }
       }
 
-      // Fallback to step 0 updates if we still have room
       if (chosen.size < PREVIEW_NODE_LIMIT) {
         const initStep = trace.steps[0];
         for (const u of initStep.node_updates) {
@@ -547,7 +612,6 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Fill remaining slots with BFS neighborhood so the preview stays connected
     if (chosen.size < PREVIEW_NODE_LIMIT) {
       const adj = new Map<number, number[]>();
       for (const e of snap.edges) {
@@ -593,7 +657,6 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
       }
     }
 
-    // 3. Final fallback if the component is smaller than the preview cap
     for (let i = 0; i < snap.nodes.length && chosen.size < PREVIEW_NODE_LIMIT; i++) {
       chosen.add(i);
     }
@@ -627,7 +690,6 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
       });
     }
 
-    // Collect edge keys touched by the trace so they are never dropped by PREVIEW_EDGE_LIMIT
     const traceEdgeKeys = new Set<string>();
     if (isPreview && trace) {
       for (const step of trace.steps) {
@@ -733,12 +795,15 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
       }
       this.selectedNodes.set(next);
       this.runTrace();
-    } else {
+    } else if (algo === 'bfs' || algo === 'dijkstra') {
       if (this.canvasPickMode() === 'start') {
         this.startNode.set(nodeIdx);
       } else {
         this.targetNode.set(this.targetNode() === nodeIdx ? null : nodeIdx);
       }
+      this.runTrace();
+    } else if (algo === 'dfs_cycle' || algo === 'prim') {
+      this.startNode.set(nodeIdx);
       this.runTrace();
     }
   }
@@ -760,11 +825,13 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         this.selectedNodes().forEach((idx) => {
           this.cy!.$id(String(idx)).addClass('tag-subset');
         });
-      } else {
+      } else if (algo === 'bfs' || algo === 'dijkstra' || algo === 'dfs_cycle' || algo === 'prim') {
         this.cy!.$id(String(this.startNode())).addClass('tag-open');
-        const target = this.targetNode();
-        if (target !== null) {
-          this.cy!.$id(String(target)).addClass('tag-target');
+        if (algo === 'bfs' || algo === 'dijkstra') {
+          const target = this.targetNode();
+          if (target !== null) {
+            this.cy!.$id(String(target)).addClass('tag-target');
+          }
         }
       }
     });
@@ -881,7 +948,7 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'node.tag-subset',
+        selector: 'node.tag-subset, node.tag-mst, node.tag-comp1',
         style: {
           'background-color': palette.subset,
           'border-color': '#FFFFFF',
@@ -889,7 +956,7 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'node.tag-current',
+        selector: 'node.tag-current, node.tag-comp0',
         style: {
           'background-color': palette.current,
           'border-color': '#FFFFFF',
@@ -898,7 +965,7 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'node.tag-open',
+        selector: 'node.tag-open, node.tag-comp2',
         style: {
           'background-color': palette.open,
           'border-color': '#FFFFFF',
@@ -906,7 +973,7 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'node.tag-visited',
+        selector: 'node.tag-visited, node.tag-comp3',
         style: {
           'background-color': palette.visited,
           'border-color': '#FFFFFF',
@@ -930,7 +997,16 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'edge.tag-cut',
+        selector: 'node.tag-cycle',
+        style: {
+          'background-color': palette.cut,
+          'border-color': '#FFFFFF',
+          'border-width': 3,
+          color: '#FFFFFF',
+        },
+      },
+      {
+        selector: 'edge.tag-cut, edge.tag-rejected',
         style: {
           'line-color': palette.cut,
           'target-arrow-color': palette.cut,
@@ -939,10 +1015,42 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'edge.tag-internal, edge.tag-tree',
+        selector: 'edge.tag-cycle',
+        style: {
+          'line-color': palette.cut,
+          'target-arrow-color': palette.cut,
+          width: 4,
+        },
+      },
+      {
+        selector: 'edge.tag-internal, edge.tag-tree, edge.tag-comp3',
         style: {
           'line-color': palette.visited,
           'target-arrow-color': palette.visited,
+          width: 3,
+        },
+      },
+      {
+        selector: 'edge.tag-comp0',
+        style: {
+          'line-color': palette.current,
+          'target-arrow-color': palette.current,
+          width: 3,
+        },
+      },
+      {
+        selector: 'edge.tag-comp1',
+        style: {
+          'line-color': palette.subset,
+          'target-arrow-color': palette.subset,
+          width: 3,
+        },
+      },
+      {
+        selector: 'edge.tag-comp2',
+        style: {
+          'line-color': palette.open,
+          'target-arrow-color': palette.open,
           width: 3,
         },
       },
@@ -964,7 +1072,7 @@ export class GraphExplorerPage implements OnInit, OnDestroy {
         },
       },
       {
-        selector: 'edge.tag-path',
+        selector: 'edge.tag-path, edge.tag-mst',
         style: {
           'line-color': palette.path,
           'target-arrow-color': palette.path,

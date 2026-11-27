@@ -14,8 +14,12 @@ export class WasmGraphEngine {
     constructor(is_directed: boolean);
     set_directed(is_directed: boolean): string;
     trace_bfs(start_node: number, target_node: number, max_steps: number): string;
+    trace_components(max_steps: number): string;
     trace_conductance(subset_indices: Uint32Array | number[], max_steps: number): string;
+    trace_dfs_cycle(start_node: number, max_steps: number): string;
     trace_dijkstra(start_node: number, target_node: number, max_steps: number): string;
+    trace_kruskal(max_steps: number): string;
+    trace_prim(start_node: number, max_steps: number): string;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -33,8 +37,12 @@ export interface InitOutput {
     readonly wasmgraphengine_new: (a: number) => number;
     readonly wasmgraphengine_set_directed: (a: number, b: number) => [number, number, number, number];
     readonly wasmgraphengine_trace_bfs: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_components: (a: number, b: number) => [number, number, number, number];
     readonly wasmgraphengine_trace_conductance: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_dfs_cycle: (a: number, b: number, c: number) => [number, number, number, number];
     readonly wasmgraphengine_trace_dijkstra: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_kruskal: (a: number, b: number) => [number, number, number, number];
+    readonly wasmgraphengine_trace_prim: (a: number, b: number, c: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
