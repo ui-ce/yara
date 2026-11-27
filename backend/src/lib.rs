@@ -213,6 +213,25 @@ impl WasmGraphEngine {
         let result = trace::trace_dijkstra(&self.graph, start_node, target, max_steps)?;
         serde_json::to_string(&result).map_err(|e| e.to_string())
     }
+    pub fn trace_dfs_cycle(&self, start_node: usize, max_steps: usize) -> Result<String, String> {
+        let result = trace::trace_dfs_cycle(&self.graph, start_node, max_steps)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    }
+
+    pub fn trace_components(&self, max_steps: usize) -> Result<String, String> {
+        let result = trace::trace_components(&self.graph, max_steps);
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    }
+
+    pub fn trace_prim(&self, start_node: usize, max_steps: usize) -> Result<String, String> {
+        let result = trace::trace_prim(&self.graph, start_node, max_steps)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    }
+
+    pub fn trace_kruskal(&self, max_steps: usize) -> Result<String, String> {
+        let result = trace::trace_kruskal(&self.graph, max_steps);
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    }
 }
 
 #[cfg(test)]

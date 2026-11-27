@@ -1,4 +1,4 @@
-use crate::model::{Graph, State};
+use crate::model::{Graph, PrimEdge, State};
 use serde::Serialize;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
@@ -82,6 +82,7 @@ impl TraceRecorder {
     }
 
     /// Reserves the last slot for the final summary step.
+    #[allow(clippy::too_many_arguments)]
     fn push(
         &mut self,
         line: usize,
@@ -108,7 +109,7 @@ impl TraceRecorder {
             metrics,
         });
     }
-
+    #[allow(clippy::too_many_arguments)]
     fn push_final(
         &mut self,
         line: usize,
@@ -902,6 +903,643 @@ pub fn trace_dijkstra(
 
     Ok(rec.finish("dijkstra", summary))
 }
+fn canonical_pair(u: usize, v: usize, is_directed: bool) -> (usize, usize) {
+    if is_directed || u <= v {
+        (u, v)
+    } else {
+        (v, u)
+    }
+}
+
+fn dsu_find(parent: &mut [usize], mut x: usize) -> usize {
+    while parent[x] != x {
+        parent[x] = parent[parent[x]];
+        x = parent[x];
+    }
+    x
+}
+
+fn dsu_union(parent: &mut [usize], rank: &mut [usize], u: usize, v: usize) -> bool {
+    let ru = dsu_find(parent, u);
+    let rv = dsu_find(parent, v);
+    if ru == rv {
+        return false;
+    }
+    if rank[ru] < rank[rv] {
+        parent[ru] = rv;
+    } else if rank[ru] > rank[rv] {
+        parent[rv] = ru;
+    } else {
+        parent[rv] = ru;
+        rank[ru] += 1;
+    }
+    true
+}
+
+pub fn trace_dfs_cycle(
+    graph: &Graph,
+    start_node: usize,
+    max_steps: usize,
+) -> Result<TraceResult, String> {
+    let n = graph.nodes.len();
+    if n == 0 || start_node >= n {
+        return Err("Start node is out of bounds".to_string());
+    }
+
+    let mut rec = TraceRecorder::new(max_steps);
+    // 0 = unvisited, 1 = visiting (on stack), 2 = visited
+    let mut state = vec![0u8; n];
+    let mut parent: Vec<Option<usize>> = vec![None; n];
+    let mut stack: Vec<(usize, usize)> = vec![(start_node, 0)];
+    let mut visited_count = 1usize;
+    let mut cycle_found = false;
+
+    state[start_node] = 1;
+
+    rec.push(
+        2,
+        "trace.dfsCycle.init.title",
+        "trace.dfsCycle.init.msg",
+        params_from(&[("start", graph.nodes[start_node].id.clone())]),
+        vec![NodeStateUpdate {
+            node: start_node,
+            tag: "current".to_string(),
+        }],
+        vec![],
+        metrics_from(&[
+            ("visited", visited_count.to_string()),
+            ("stackDepth", stack.len().to_string()),
+            ("cycleStatus", "—".to_string()),
+        ]),
+    );
+
+    while let Some(&(u, idx)) = stack.last() {
+        let u_label = graph.nodes[u].id.clone();
+
+        if idx < graph.adjacency_list[u].len() {
+            stack.last_mut().unwrap().1 += 1;
+            let v = graph.adjacency_list[u][idx].target;
+            let v_label = graph.nodes[v].id.clone();
+
+            if !graph.is_directed && Some(v) == parent[u] && v != u {
+                continue;
+            }
+
+            if state[v] == 1 || (!graph.is_directed && state[v] == 2) {
+                cycle_found = true;
+
+                let mut cycle_nodes = vec![
+                    NodeStateUpdate {
+                        node: u,
+                        tag: "cycle".to_string(),
+                    },
+                    NodeStateUpdate {
+                        node: v,
+                        tag: "cycle".to_string(),
+                    },
+                ];
+                let mut cycle_edges = vec![EdgeStateUpdate {
+                    source: u,
+                    target: v,
+                    tag: "cycle".to_string(),
+                }];
+
+                let mut cur = u;
+                let mut guard = 0usize;
+                while cur != v && guard < n {
+                    if let Some(p) = parent[cur] {
+                        cycle_edges.push(EdgeStateUpdate {
+                            source: p,
+                            target: cur,
+                            tag: "cycle".to_string(),
+                        });
+                        cycle_nodes.push(NodeStateUpdate {
+                            node: p,
+                            tag: "cycle".to_string(),
+                        });
+                        cur = p;
+                    } else {
+                        break;
+                    }
+                    guard += 1;
+                }
+
+                rec.push_final(
+                    6,
+                    "trace.dfsCycle.found.title",
+                    "trace.dfsCycle.found.msg",
+                    params_from(&[("u", u_label), ("v", v_label)]),
+                    cycle_nodes,
+                    cycle_edges,
+                    metrics_from(&[
+                        ("visited", visited_count.to_string()),
+                        ("stackDepth", stack.len().to_string()),
+                        ("cycleStatus", "yes".to_string()),
+                    ]),
+                );
+                break;
+            }
+
+            if state[v] == 0 {
+                state[v] = 1;
+                parent[v] = Some(u);
+                visited_count += 1;
+                stack.push((v, 0));
+
+                rec.push(
+                    7,
+                    "trace.dfsCycle.discover.title",
+                    "trace.dfsCycle.discover.msg",
+                    params_from(&[("u", u_label), ("v", v_label)]),
+                    vec![
+                        NodeStateUpdate {
+                            node: u,
+                            tag: "open".to_string(),
+                        },
+                        NodeStateUpdate {
+                            node: v,
+                            tag: "current".to_string(),
+                        },
+                    ],
+                    vec![EdgeStateUpdate {
+                        source: u,
+                        target: v,
+                        tag: "tree".to_string(),
+                    }],
+                    metrics_from(&[
+                        ("visited", visited_count.to_string()),
+                        ("stackDepth", stack.len().to_string()),
+                        ("cycleStatus", "—".to_string()),
+                    ]),
+                );
+            }
+        } else {
+            stack.pop();
+            state[u] = 2;
+
+            let mut node_updates = vec![NodeStateUpdate {
+                node: u,
+                tag: "visited".to_string(),
+            }];
+            if let Some(&(prev_u, _)) = stack.last() {
+                node_updates.push(NodeStateUpdate {
+                    node: prev_u,
+                    tag: "current".to_string(),
+                });
+            }
+
+            rec.push(
+                8,
+                "trace.dfsCycle.backtrack.title",
+                "trace.dfsCycle.backtrack.msg",
+                params_from(&[("node", u_label)]),
+                node_updates,
+                vec![],
+                metrics_from(&[
+                    ("visited", visited_count.to_string()),
+                    ("stackDepth", stack.len().to_string()),
+                    ("cycleStatus", "—".to_string()),
+                ]),
+            );
+        }
+    }
+
+    if !cycle_found {
+        rec.push_final(
+            9,
+            "trace.dfsCycle.none.title",
+            "trace.dfsCycle.none.msg",
+            params_from(&[("visited", visited_count.to_string())]),
+            vec![],
+            vec![],
+            metrics_from(&[
+                ("visited", visited_count.to_string()),
+                ("stackDepth", "0".to_string()),
+                ("cycleStatus", "no".to_string()),
+            ]),
+        );
+    }
+
+    let summary = params_from(&[
+        ("has_cycle", cycle_found.to_string()),
+        ("visited_count", visited_count.to_string()),
+    ]);
+
+    Ok(rec.finish("dfs_cycle", summary))
+}
+
+pub fn trace_components(graph: &Graph, max_steps: usize) -> TraceResult {
+    let n = graph.nodes.len();
+    let mut rec = TraceRecorder::new(max_steps);
+    let mut visited = vec![false; n];
+    let mut queue = VecDeque::new();
+    let mut component_count = 0usize;
+    let mut visited_count = 0usize;
+
+    rec.push(
+        2,
+        "trace.components.init.title",
+        "trace.components.init.msg",
+        params_from(&[("totalNodes", n.to_string())]),
+        vec![],
+        vec![],
+        metrics_from(&[
+            ("components", "0".to_string()),
+            ("visited", "0".to_string()),
+            ("currentCompSize", "0".to_string()),
+        ]),
+    );
+
+    for start in 0..n {
+        if visited[start] {
+            continue;
+        }
+
+        component_count += 1;
+        let comp_tag = format!("comp{}", (component_count - 1) % 4);
+        let mut comp_size = 1usize;
+
+        visited[start] = true;
+        visited_count += 1;
+        queue.push_back(start);
+
+        rec.push(
+            5,
+            "trace.components.new.title",
+            "trace.components.new.msg",
+            params_from(&[
+                ("comp", component_count.to_string()),
+                ("node", graph.nodes[start].id.clone()),
+            ]),
+            vec![NodeStateUpdate {
+                node: start,
+                tag: comp_tag.clone(),
+            }],
+            vec![],
+            metrics_from(&[
+                ("components", component_count.to_string()),
+                ("visited", visited_count.to_string()),
+                ("currentCompSize", comp_size.to_string()),
+            ]),
+        );
+
+        while let Some(u) = queue.pop_front() {
+            let u_label = graph.nodes[u].id.clone();
+
+            for edge in &graph.adjacency_list[u] {
+                let v = edge.target;
+                if !visited[v] {
+                    visited[v] = true;
+                    visited_count += 1;
+                    comp_size += 1;
+                    queue.push_back(v);
+
+                    rec.push(
+                        8,
+                        "trace.components.expand.title",
+                        "trace.components.expand.msg",
+                        params_from(&[
+                            ("u", u_label.clone()),
+                            ("v", graph.nodes[v].id.clone()),
+                            ("comp", component_count.to_string()),
+                        ]),
+                        vec![NodeStateUpdate {
+                            node: v,
+                            tag: comp_tag.clone(),
+                        }],
+                        vec![EdgeStateUpdate {
+                            source: u,
+                            target: v,
+                            tag: comp_tag.clone(),
+                        }],
+                        metrics_from(&[
+                            ("components", component_count.to_string()),
+                            ("visited", visited_count.to_string()),
+                            ("currentCompSize", comp_size.to_string()),
+                        ]),
+                    );
+                }
+            }
+        }
+    }
+
+    rec.push_final(
+        9,
+        "trace.components.done.title",
+        "trace.components.done.msg",
+        params_from(&[
+            ("components", component_count.to_string()),
+            ("visited", visited_count.to_string()),
+        ]),
+        vec![],
+        vec![],
+        metrics_from(&[
+            ("components", component_count.to_string()),
+            ("visited", visited_count.to_string()),
+        ]),
+    );
+
+    let summary = params_from(&[
+        ("component_count", component_count.to_string()),
+        ("visited_count", visited_count.to_string()),
+    ]);
+
+    rec.finish("components", summary)
+}
+
+pub fn trace_prim(
+    graph: &Graph,
+    start_node: usize,
+    max_steps: usize,
+) -> Result<TraceResult, String> {
+    let n = graph.nodes.len();
+    if n == 0 || start_node >= n {
+        return Err("Start node is out of bounds".to_string());
+    }
+
+    let mut rec = TraceRecorder::new(max_steps);
+    let mut in_mst = vec![false; n];
+    let mut mst_edge_set: HashSet<(usize, usize)> = HashSet::new();
+    // `PrimEdge` already reverses Ord in `model.rs`, so `BinaryHeap<PrimEdge>` is a min-heap.
+    let mut min_heap: BinaryHeap<PrimEdge> = BinaryHeap::new();
+    let mut total_weight = 0.0;
+    let mut mst_edge_count = 0usize;
+    let mut mst_node_count = 1usize;
+
+    in_mst[start_node] = true;
+    for edge in &graph.adjacency_list[start_node] {
+        if edge.target != start_node {
+            min_heap.push(PrimEdge {
+                source: start_node,
+                target: edge.target,
+                weight: edge.weight,
+            });
+        }
+    }
+
+    rec.push(
+        2,
+        "trace.prim.init.title",
+        "trace.prim.init.msg",
+        params_from(&[
+            ("start", graph.nodes[start_node].id.clone()),
+            ("heapSize", min_heap.len().to_string()),
+        ]),
+        vec![NodeStateUpdate {
+            node: start_node,
+            tag: "mst".to_string(),
+        }],
+        vec![],
+        metrics_from(&[
+            ("mstEdges", "0".to_string()),
+            ("totalWeight", "0".to_string()),
+            ("heapSize", min_heap.len().to_string()),
+        ]),
+    );
+
+    while let Some(edge) = min_heap.pop() {
+        let u_label = graph.nodes[edge.source].id.clone();
+        let v_label = graph.nodes[edge.target].id.clone();
+        let pair = canonical_pair(edge.source, edge.target, graph.is_directed);
+
+        if in_mst[edge.target] {
+            let edge_updates = if mst_edge_set.contains(&pair) {
+                vec![]
+            } else {
+                vec![EdgeStateUpdate {
+                    source: edge.source,
+                    target: edge.target,
+                    tag: "rejected".to_string(),
+                }]
+            };
+
+            rec.push(
+                5,
+                "trace.prim.skip.title",
+                "trace.prim.skip.msg",
+                params_from(&[("u", u_label), ("v", v_label), ("w", fmt_num(edge.weight))]),
+                vec![],
+                edge_updates,
+                metrics_from(&[
+                    ("mstEdges", mst_edge_count.to_string()),
+                    ("totalWeight", fmt_num(total_weight)),
+                    ("heapSize", min_heap.len().to_string()),
+                ]),
+            );
+            continue;
+        }
+
+        in_mst[edge.target] = true;
+        mst_node_count += 1;
+        mst_edge_count += 1;
+        total_weight += edge.weight;
+        mst_edge_set.insert(pair);
+
+        let mut frontier_edges = vec![EdgeStateUpdate {
+            source: edge.source,
+            target: edge.target,
+            tag: "mst".to_string(),
+        }];
+
+        for next_edge in &graph.adjacency_list[edge.target] {
+            if !in_mst[next_edge.target] {
+                min_heap.push(PrimEdge {
+                    source: edge.target,
+                    target: next_edge.target,
+                    weight: next_edge.weight,
+                });
+                frontier_edges.push(EdgeStateUpdate {
+                    source: edge.target,
+                    target: next_edge.target,
+                    tag: "compare".to_string(),
+                });
+            }
+        }
+
+        rec.push(
+            6,
+            "trace.prim.accept.title",
+            "trace.prim.accept.msg",
+            params_from(&[
+                ("u", u_label),
+                ("v", v_label),
+                ("w", fmt_num(edge.weight)),
+                ("totalWeight", fmt_num(total_weight)),
+            ]),
+            vec![NodeStateUpdate {
+                node: edge.target,
+                tag: "mst".to_string(),
+            }],
+            frontier_edges,
+            metrics_from(&[
+                ("mstEdges", mst_edge_count.to_string()),
+                ("totalWeight", fmt_num(total_weight)),
+                ("heapSize", min_heap.len().to_string()),
+            ]),
+        );
+
+        if mst_node_count == n {
+            break;
+        }
+    }
+
+    rec.push_final(
+        9,
+        "trace.prim.done.title",
+        "trace.prim.done.msg",
+        params_from(&[
+            ("mstEdges", mst_edge_count.to_string()),
+            ("totalWeight", fmt_num(total_weight)),
+        ]),
+        vec![],
+        vec![],
+        metrics_from(&[
+            ("mstEdges", mst_edge_count.to_string()),
+            ("totalWeight", fmt_num(total_weight)),
+        ]),
+    );
+
+    let summary = params_from(&[
+        ("mst_edge_count", mst_edge_count.to_string()),
+        ("total_weight", fmt_num(total_weight)),
+    ]);
+
+    Ok(rec.finish("prim", summary))
+}
+
+pub fn trace_kruskal(graph: &Graph, max_steps: usize) -> TraceResult {
+    let n = graph.nodes.len();
+    let mut rec = TraceRecorder::new(max_steps);
+
+    let mut all_edges: Vec<PrimEdge> = Vec::new();
+    for (u, neighbors) in graph.adjacency_list.iter().enumerate() {
+        for edge in neighbors {
+            if u == edge.target {
+                continue;
+            }
+            if !graph.is_directed && u > edge.target {
+                continue;
+            }
+            all_edges.push(PrimEdge {
+                source: u,
+                target: edge.target,
+                weight: edge.weight,
+            });
+        }
+    }
+    all_edges.sort_by(|a, b| a.weight.total_cmp(&b.weight));
+
+    let mut parent: Vec<usize> = (0..n).collect();
+    let mut rank = vec![0usize; n];
+    let mut mst_edge_count = 0usize;
+    let mut rejected_count = 0usize;
+    let mut total_weight = 0.0;
+
+    rec.push(
+        2,
+        "trace.kruskal.init.title",
+        "trace.kruskal.init.msg",
+        params_from(&[("edgeCount", all_edges.len().to_string())]),
+        vec![],
+        vec![],
+        metrics_from(&[
+            ("mstEdges", "0".to_string()),
+            ("rejectedEdges", "0".to_string()),
+            ("totalWeight", "0".to_string()),
+        ]),
+    );
+
+    for edge in all_edges {
+        let u_label = graph.nodes[edge.source].id.clone();
+        let v_label = graph.nodes[edge.target].id.clone();
+
+        if dsu_union(&mut parent, &mut rank, edge.source, edge.target) {
+            mst_edge_count += 1;
+            total_weight += edge.weight;
+
+            rec.push(
+                6,
+                "trace.kruskal.accept.title",
+                "trace.kruskal.accept.msg",
+                params_from(&[
+                    ("u", u_label),
+                    ("v", v_label),
+                    ("w", fmt_num(edge.weight)),
+                    ("totalWeight", fmt_num(total_weight)),
+                ]),
+                vec![
+                    NodeStateUpdate {
+                        node: edge.source,
+                        tag: "mst".to_string(),
+                    },
+                    NodeStateUpdate {
+                        node: edge.target,
+                        tag: "mst".to_string(),
+                    },
+                ],
+                vec![EdgeStateUpdate {
+                    source: edge.source,
+                    target: edge.target,
+                    tag: "mst".to_string(),
+                }],
+                metrics_from(&[
+                    ("mstEdges", mst_edge_count.to_string()),
+                    ("rejectedEdges", rejected_count.to_string()),
+                    ("totalWeight", fmt_num(total_weight)),
+                ]),
+            );
+
+            if n > 0 && mst_edge_count == n - 1 {
+                break;
+            }
+        } else {
+            rejected_count += 1;
+
+            rec.push(
+                7,
+                "trace.kruskal.reject.title",
+                "trace.kruskal.reject.msg",
+                params_from(&[("u", u_label), ("v", v_label), ("w", fmt_num(edge.weight))]),
+                vec![],
+                vec![EdgeStateUpdate {
+                    source: edge.source,
+                    target: edge.target,
+                    tag: "rejected".to_string(),
+                }],
+                metrics_from(&[
+                    ("mstEdges", mst_edge_count.to_string()),
+                    ("rejectedEdges", rejected_count.to_string()),
+                    ("totalWeight", fmt_num(total_weight)),
+                ]),
+            );
+        }
+    }
+
+    rec.push_final(
+        8,
+        "trace.kruskal.done.title",
+        "trace.kruskal.done.msg",
+        params_from(&[
+            ("mstEdges", mst_edge_count.to_string()),
+            ("totalWeight", fmt_num(total_weight)),
+        ]),
+        vec![],
+        vec![],
+        metrics_from(&[
+            ("mstEdges", mst_edge_count.to_string()),
+            ("rejectedEdges", rejected_count.to_string()),
+            ("totalWeight", fmt_num(total_weight)),
+        ]),
+    );
+
+    let summary = params_from(&[
+        ("mst_edge_count", mst_edge_count.to_string()),
+        ("rejected_count", rejected_count.to_string()),
+        ("total_weight", fmt_num(total_weight)),
+    ]);
+
+    rec.finish("kruskal", summary)
+}
 
 #[cfg(test)]
 mod tests {
@@ -961,5 +1599,61 @@ mod tests {
         assert!(stats.is_connected);
         assert_eq!(stats.component_count, 1);
         assert!(stats.has_cycle);
+    }
+    #[test]
+    fn test_trace_dfs_cycle_found_and_acyclic() {
+        let g = sample_weighted_graph();
+        let cyclic = trace_dfs_cycle(&g, 0, 500).unwrap();
+        assert_eq!(cyclic.summary.get("has_cycle").unwrap(), "true");
+
+        let mut tree = Graph::new(false);
+        for id in ["0", "1", "2"] {
+            tree.add_node(id);
+        }
+        tree.add_edge("0".into(), "1".into(), 1.0);
+        tree.add_edge("1".into(), "2".into(), 1.0);
+        let acyclic = trace_dfs_cycle(&tree, 0, 500).unwrap();
+        assert_eq!(acyclic.summary.get("has_cycle").unwrap(), "false");
+    }
+
+    #[test]
+    fn test_trace_components_multiple() {
+        let mut g = Graph::new(false);
+        for id in ["A", "B", "C", "D", "E"] {
+            g.add_node(id);
+        }
+        g.add_edge("A".into(), "B".into(), 1.0);
+        g.add_edge("C".into(), "D".into(), 1.0);
+        let res = trace_components(&g, 500);
+        assert_eq!(res.summary.get("component_count").unwrap(), "3");
+    }
+
+    #[test]
+    fn test_trace_prim_and_kruskal_mst_weight() {
+        let g = sample_weighted_graph();
+        // MST edges: A-B (1), C-D (1), B-C (2) => stops early at n-1=3 before seeing A-C (10)
+        let prim_res = trace_prim(&g, 0, 500).unwrap();
+        assert_eq!(prim_res.summary.get("mst_edge_count").unwrap(), "3");
+        assert_eq!(prim_res.summary.get("total_weight").unwrap(), "4");
+
+        let kruskal_res = trace_kruskal(&g, 500);
+        assert_eq!(kruskal_res.summary.get("mst_edge_count").unwrap(), "3");
+        assert_eq!(kruskal_res.summary.get("total_weight").unwrap(), "4");
+        assert_eq!(kruskal_res.summary.get("rejected_count").unwrap(), "0");
+
+        // Graph where cycle edge A-C (1.5) is evaluated before bridge C-D (5)
+        let mut g2 = Graph::new(false);
+        for id in ["A", "B", "C", "D"] {
+            g2.add_node(id);
+        }
+        g2.add_edge("A".into(), "B".into(), 1.0);
+        g2.add_edge("B".into(), "C".into(), 1.0);
+        g2.add_edge("A".into(), "C".into(), 1.5);
+        g2.add_edge("C".into(), "D".into(), 5.0);
+
+        let kruskal_cycle = trace_kruskal(&g2, 500);
+        assert_eq!(kruskal_cycle.summary.get("mst_edge_count").unwrap(), "3");
+        assert_eq!(kruskal_cycle.summary.get("total_weight").unwrap(), "7");
+        assert_eq!(kruskal_cycle.summary.get("rejected_count").unwrap(), "1");
     }
 }
