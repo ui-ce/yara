@@ -3,19 +3,8 @@
 
 یارا : ابزاری برای یادگیری و آموزش علوم رایانه.
 
-
-
-بازطراحی و توسعه‌ی ابزار تعاملی آموزش و مصورسازی الگوریتم‌ها و ساختمان داده‌ها
-
-*Redesign and Development of an Interactive Educational Visualization Tool for Algorithms and Data Structures*
-
-**دانشگاه اصفهان — دانشکده‌ی مهندسی کامپیوتر — گروه مهندسی نرم‌افزار**
-
-پروژه‌ی کارشناسی | پژوهشگر: زهرا ابراهیمی
-
 آدرس سامانه : [algovisualizer.pages.dev](http://algovisualizer.pages.dev) 
  
-
 ---
 
 ## 🎯 هدف پروژه (Project Goals)
@@ -289,8 +278,3 @@ examples/latex-examples/src
 ---
 
 ## 📄 مستندات پروژه
-
-* **یارا — سامانه‌ی یادگیری و آموزش علوم رایانه**
-* دانشگاه اصفهان
-* پروژه‌ی کارشناسی مهندسی کامپیوتر
-* ۱۴۰۵
