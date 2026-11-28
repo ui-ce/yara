@@ -5,8 +5,8 @@
 
 آدرس سامانه : [algovisualizer.pages.dev](http://algovisualizer.pages.dev) 
  
- [تیم طراحی و توسعه](./contributors)
----
+ [تیم طراحی و توسعه](./contributors.md)
+ 
 
 ## 🎯 هدف پروژه (Project Goals)
 
