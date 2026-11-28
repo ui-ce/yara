@@ -1,18 +1,18 @@
 # تیم طراحی و توسعه
 
- - زهرا ابراهیمی
+زهرا ابراهیمی
 Zahra Ebrahimi
 
-- یاسمین اکبری
+یاسمین اکبری
 Yasamin Akbari
 
-- مهدی رفیعی
+مهدی رفیعی
 Mahdi Rafiei
 
-- پویا سادات‌الحسینی
+پویا سادات‌الحسینی
 Pouya SadatAlhosseini
 
-- مهروسادات نوحی
+مهروسادات نوحی
 MahrouSadat Nouhi
 
 
